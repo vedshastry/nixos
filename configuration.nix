@@ -6,15 +6,15 @@
 # --- BOOTLOADER: GRUB ---
   # We disable systemd-boot and enable GRUB with OS Prober
   boot.loader.systemd-boot.enable = false;
-  
+
   boot.loader.grub = {
     enable = true;
     device = "nodev";      # "nodev" is correct for EFI
     efiSupport = true;
     useOSProber = true;    # This finds Windows and Arch automatically
-    
+
     # Allow GRUB to modify EFI variables
-    efiInstallAsRemovable = false; 
+    efiInstallAsRemovable = false;
   };
   boot.loader.efi.canTouchEfiVariables = true;
 
@@ -22,20 +22,20 @@
   # 1. Unlock LUKS container at boot
   boot.initrd.luks.devices."cryptdev" = {
     device = "/dev/disk/by-uuid/d3719f15-99c8-4217-8b8e-6c0384732c4e"; # UUID of nvme0n1p6
-    # If you want to unlock it automatically with a keyfile later, 
+    # If you want to unlock it automatically with a keyfile later,
     # you add the keyfile config here. For now, it will ask for password.
   };
 
   # 2. Mount Arch Home partition
   fileSystems."/home/ved/arch_home" = {
-    device = "/dev/mapper/cryptdev"; 
+    device = "/dev/mapper/cryptdev";
     fsType = "btrfs";
     options = [ "subvol=@home" ]; # REPLACE '@home' with your actual subvol name
   };
 
 
   # Netowrking
-  networking.hostName = "thinkpad"; 
+  networking.hostName = "thinkpad";
   networking.networkmanager.enable = true; # nm-cli applet needs this
 
   # Time & Locale
@@ -58,7 +58,7 @@
   services.fprintd.enable = true; # Fingerprint reader
 
   # Cloudflare WARP (Systemd Service)
-  systemd.packages = [ pkgs.cloudflare-warp ]; 
+  systemd.packages = [ pkgs.cloudflare-warp ];
   systemd.services.warp-svc.wantedBy = [ "multi-user.target" ];
 
   # Allow Unfree Software (Dropbox, WARP, Stata deps)
@@ -73,7 +73,7 @@
     # Suckless Basics (Standard versions for now)
       st
       dmenu
-      slstatus 
+      slstatus
 
       # Workflow
       pulsar       # Editor
@@ -86,10 +86,10 @@
       ripgrep
       fd
       cloudflare-warp
-      
+
       # Cloud
       dropbox
-      
+
       # System Management
       pavucontrol  # Audio GUI
       htop
@@ -98,29 +98,29 @@
 
   # The "Suckless" Build Strategy
   # We overlay your local source code on top of the default dwm package
-  nixpkgs.overlays = [
-    (final: prev: {
-      dwm = prev.dwm.overrideAttrs (old: {
-        src = /home/ved/arch_home/repos/dwm;
-      });
-      st = prev.st.overrideAttrs (old: {
-        src = /home/ved/arch_home/repos/dmenu;
-      });
-      st = prev.st.overrideAttrs (old: {
-        src = /home/ved/arch_home/repos/st;
-      });
-      slstatus = prev.slstatus.overrideAttrs (old: {
-        src = /home/ved/arch_home/repos/slstatus;
-      });
-    })
-  ];
+  # nixpkgs.overlays = [
+    # (final: prev: {
+      # dwm = prev.dwm.overrideAttrs (old: {
+        # src = /home/ved/arch_home/repos/dwm;
+      # });
+      # st = prev.dmenu.overrideAttrs (old: {
+        # src = /home/ved/arch_home/repos/dmenu;
+      # });
+      # st = prev.st.overrideAttrs (old: {
+        # src = /home/ved/arch_home/repos/st;
+      # });
+      # slstatus = prev.slstatus.overrideAttrs (old: {
+        # src = /home/ved/arch_home/repos/slstatus;
+      # });
+    # })
+  # ];
 
   services.xserver = {
     enable = true;
     windowManager.dwm.enable = true;
     displayManager.startx.enable = true; # Keep it simple, or use a DM like sddm
   };
-  
+
   # Fonts
   fonts.packages = with pkgs; [
     font-awesome
