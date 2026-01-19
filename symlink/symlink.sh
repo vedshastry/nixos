@@ -1,12 +1,12 @@
 #!/bin/sh
 
 # 1. Clean up default folders created by NixOS
-rmdir ~/Documents ~/Downloads ~/Music ~/Pictures ~/Videos ~/Desktop 2>/dev/null
+# rmdir ~/Documents ~/Downloads ~/Music ~/Pictures ~/Videos ~/Desktop 2>/dev/null
 
 # 2. Symlink the "Big Data" folders from Arch
-ln -s ~/arch_home/Documents ~/Documents
-ln -s ~/arch_home/Downloads ~/Downloads
-ln -s ~/arch_home/Pictures ~/Pictures
+# ln -s ~/arch_home/Documents ~/Documents
+# ln -s ~/arch_home/Downloads ~/Downloads
+# ln -s ~/arch_home/Pictures ~/Pictures
 ln -s ~/arch_home/Dropbox ~/Dropbox
 
 # 3. Symlink your work

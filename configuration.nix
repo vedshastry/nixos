@@ -26,6 +26,8 @@
     '';
   };
   boot.loader.efi.canTouchEfiVariables = true; # EFI vars
+  # NixOS initrd unlocks the cryptdrive so it can mount arch_home
+  boot.initrd.luks.devices."cryptdev".device = "/dev/disk/by-uuid/d3719f15-99c8-4217-8b8e-6c0384732c4e";
 
   # 2. Mount Arch Home partition
   fileSystems."/home/ved/arch_home" = {
@@ -96,6 +98,7 @@
     # Suckless Basics (Standard versions for now)
       st
       dmenu
+      dwm
       slstatus
 
       # Workflow
@@ -125,7 +128,7 @@
       dwm = prev.dwm.overrideAttrs (old: {
         src = /home/ved/arch_home/repos/dwm;
       });
-      st = prev.dmenu.overrideAttrs (old: {
+      dmenu = prev.dmenu.overrideAttrs (old: {
         src = /home/ved/arch_home/repos/dmenu;
       });
       st = prev.st.overrideAttrs (old: {
