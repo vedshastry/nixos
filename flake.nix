@@ -13,6 +13,24 @@
 
     # Zen Browser Flake
     zen-browser.url = "github:0xc000022070/zen-browser-flake";
+
+    # Suckless tools
+    my-dwm = {
+    url = "github:vedshastry/dwm";
+    flake = false; 		# these are standard C repos not flakes, so flake = false
+    };
+    my-st = {
+    url = "github:vedshastry/st";
+    flake = false;
+    };
+    my-dmenu = {
+    url = "github:vedshastry/dmenu";
+    flake = false;
+    };
+    my-slstatus = {
+    url = "github:vedshastry/slstatus";
+    flake = false;
+    };
   };
 
   outputs = { self, nixpkgs, nixos-hardware, home-manager, ... }@inputs: {

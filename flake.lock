@@ -41,6 +41,70 @@
         "type": "github"
       }
     },
+    "my-dmenu": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1676357561,
+        "narHash": "sha256-sC5tCoTERt/4+eHA/17sL0043YfvymL/ojfLl07UW5E=",
+        "owner": "vedshastry",
+        "repo": "dmenu",
+        "rev": "b1fceb472aeb8cf8b040d07d0d5892e9f7e69913",
+        "type": "github"
+      },
+      "original": {
+        "owner": "vedshastry",
+        "repo": "dmenu",
+        "type": "github"
+      }
+    },
+    "my-dwm": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1723254260,
+        "narHash": "sha256-qvJA57OUQ3ny67gQKSIizqGTtnfPvMgQabEMz/roieU=",
+        "owner": "vedshastry",
+        "repo": "dwm",
+        "rev": "d3dd7dda6d34b467c21c4695968cf382f46a56d5",
+        "type": "github"
+      },
+      "original": {
+        "owner": "vedshastry",
+        "repo": "dwm",
+        "type": "github"
+      }
+    },
+    "my-slstatus": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1723254725,
+        "narHash": "sha256-xCZTl0S8EV5bSJIzVKJH0D0MVaUXLNItq1+i03ZJenY=",
+        "owner": "vedshastry",
+        "repo": "slstatus",
+        "rev": "92e854e49970571fd6c863cc97daa7c0861a4c35",
+        "type": "github"
+      },
+      "original": {
+        "owner": "vedshastry",
+        "repo": "slstatus",
+        "type": "github"
+      }
+    },
+    "my-st": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1665079124,
+        "narHash": "sha256-NT/mlGJw6ma5n6jQOKdx7ALS70jFqNIU27RrXVT712Y=",
+        "owner": "vedshastry",
+        "repo": "st",
+        "rev": "9f7eea4e4abfe4859505903fc941332c99d9b4d0",
+        "type": "github"
+      },
+      "original": {
+        "owner": "vedshastry",
+        "repo": "st",
+        "type": "github"
+      }
+    },
     "nixos-hardware": {
       "locked": {
         "lastModified": 1768736227,
@@ -92,6 +156,10 @@
     "root": {
       "inputs": {
         "home-manager": "home-manager",
+        "my-dmenu": "my-dmenu",
+        "my-dwm": "my-dwm",
+        "my-slstatus": "my-slstatus",
+        "my-st": "my-st",
         "nixos-hardware": "nixos-hardware",
         "nixpkgs": "nixpkgs",
         "zen-browser": "zen-browser"
