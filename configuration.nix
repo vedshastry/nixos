@@ -104,6 +104,9 @@
   # System Packages (The "Base" layer)
   environment.systemPackages = with pkgs; [
 
+	# Utilities
+	brightnessctl
+
     # Suckless dependencies
     xorg.libX11 xorg.libXft xorg.libXinerama
 

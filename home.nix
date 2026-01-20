@@ -18,8 +18,8 @@
     neovim
     python3
     R
-    julia
-    qgis
+    #julia
+    #qgis
     
     # Cloud / Sync
     dropbox
