@@ -142,49 +142,15 @@
     (final: prev: {
       dwm = prev.dwm.overrideAttrs (old: {
         src = inputs.my-dwm;
-	# required libraries for build
-	nativeBuildInputs = (old.nativeBuildInputs or []) ++ [ prev.pkg-config ];
-	buildInputs = (old.buildInputs or []) ++ [
-		prev.xorg.libX11
-		prev.xorg.libXft
-		prev.xorg.libXinerama
-		prev.imlib2
-	];
       });
       st = prev.st.overrideAttrs (old: {
         src = inputs.my-st;
-	# required libraries for build
-	nativeBuildInputs = (old.nativeBuildInputs or []) ++ [ prev.pkg-config prev.ncurses ];
-	buildInputs = (old.buildInputs or []) ++ [
-		prev.harfbuzz
-		prev.xorg.libX11
-		prev.xorg.libXft
-	];
-
-	buildPhase = ''
-	$CC *.c -o st -lX11 -lXft -lfontconfig -lfreetype -lXrender -lharfbuzz -lncurses -I$
-	{prev.harfbuzz.dev}/include/harfbuzz
-	'';
-
-	installPhase = ''
-	mkdir -p $out/bin
-	cp st $out/bi
-	'';
-
       });
       dmenu = prev.dmenu.overrideAttrs (old: {
         src = inputs.my-dmenu;
-	nativeBuildInputs = (old.nativeBuildInputs or []) ++ [ prev.pkg-config ];
-	buildInputs = (old.buildInputs or []) ++ [
-		prev.xorg.libXft
-	];
       });
       slstatus = prev.slstatus.overrideAttrs (old: {
         src = inputs.my-slstatus;
-	nativeBuildInputs = (old.nativeBuildInputs or []) ++ [ prev.pkg-config ];
-	buildInputs = (old.buildInputs or []) ++ [
-		prev.xorg.libX11
-	];
       });
     })
   ];
