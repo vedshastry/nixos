@@ -11,7 +11,7 @@
     ranger
     
     # Browsers
-    inputs.zen-browser.packages."${pkgs.system}".specific
+    inputs.zen-browser.packages."${pkgs.system}".default
     
     # Research / Dev
     pulsar
