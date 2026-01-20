@@ -143,21 +143,28 @@
       dwm = prev.dwm.overrideAttrs (old: {
         src = inputs.my-dwm;
         nativeBuildInputs = (old.nativeBuildInputs or []) ++ [ prev.git ];
+
+        preBuild = ''
+          make clean
+        '';
       });
+
       st = prev.st.overrideAttrs (old: {
         src = inputs.my-st;
         nativeBuildInputs = (old.nativeBuildInputs or []) ++ [ prev.git prev.pkg-config ];
-	buildInputs = (old.buildInputs or []) ++ [ prev.harfbuzz ];
+	      buildInputs = (old.buildInputs or []) ++ [ prev.harfbuzz ];
 
-	postPatch = ''
-	${old.postPatch or ""}
-	sed -i '/git submodule/d' Makefile
-	'';
+        postPatch = ''
+        ${old.postPatch or ""}
+        sed -i '/git submodule/d' Makefile
+        '';
       });
+
       dmenu = prev.dmenu.overrideAttrs (old: {
         src = inputs.my-dmenu;
         nativeBuildInputs = (old.nativeBuildInputs or []) ++ [ prev.git ];
       });
+
       slstatus = prev.slstatus.overrideAttrs (old: {
         src = inputs.my-slstatus;
         nativeBuildInputs = (old.nativeBuildInputs or []) ++ [ prev.git ];
@@ -173,11 +180,25 @@
   services.libinput.enable = true; # Enable touchpad support
 
   # Fonts
-  fonts.packages = with pkgs; [
-    font-awesome
-    nerd-fonts.jetbrains-mono
-    nerd-fonts.symbols-only
-  ];
+  fonts = {
+	  packages = with pkgs; [
+	    noto-fonts
+	    noto-fonts-cjk-sans
+	    noto-fonts-color-emoji
+	    font-awesome
+	    nerd-fonts.jetbrains-mono
+	    nerd-fonts.symbols-only
+	  ];
+
+	  fontconfig = {
+	    enable = true;
+	    defaultFonts = {
+	      monospace = [ "JetBrainsMono Nerd Font" ];
+	      serif = [ "Noto Serif" ];
+	      sansSerif = [ "Noto Sans" ];
+	    };
+	  };
+  };
 
   # Essential Hardware Tweaks (ThinkPad T14 Gen 5)
   boot.kernelPackages = pkgs.linuxPackages_latest; # 6.12+ kernel for HawkPoint APU
