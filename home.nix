@@ -9,6 +9,26 @@
     # Core Tools
     ripgrep fd unzip jq tree
     ranger
+
+    # Standard progs (xinit)
+    picom
+    nitrogen
+    dunst
+    flameshot
+    numlockx
+
+    # x11 utils
+    xorg.xset
+    xorg.setxkbmap
+    xorg.xsetroot
+
+    # Tray apps
+    networkmanagerapplet
+    xfce.xfce4-power-manager
+    blueman
+    pasystray
+    solaar
+
     
     # Browsers
     inputs.zen-browser.packages."${pkgs.system}".default
@@ -21,8 +41,12 @@
     #julia
     #qgis
     
-    # Cloud / Sync
+    # Apps
+    keepassxc
+    slack
     dropbox
+    touchegg
+    emacs
     syncthing
     obsidian
   ];

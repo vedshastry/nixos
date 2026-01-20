@@ -20,7 +20,8 @@
     flake = false; 		# these are standard C repos not flakes, so flake = false
     };
     my-st = {
-    url = "github:vedshastry/st";
+    #url = "github:vedshastry/st";
+    url = "git+https://github.com/vedshastry/st.git?submodules=1";
     flake = false;
     };
     my-dmenu = {

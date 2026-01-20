@@ -146,7 +146,13 @@
       });
       st = prev.st.overrideAttrs (old: {
         src = inputs.my-st;
-        nativeBuildInputs = (old.nativeBuildInputs or []) ++ [ prev.git ];
+        nativeBuildInputs = (old.nativeBuildInputs or []) ++ [ prev.git prev.pkg-config ];
+	buildInputs = (old.buildInputs or []) ++ [ prev.harfbuzz ];
+
+	postPatch = ''
+	${old.postPatch or ""}
+	sed -i '/git submodule/d' Makefile
+	'';
       });
       dmenu = prev.dmenu.overrideAttrs (old: {
         src = inputs.my-dmenu;
