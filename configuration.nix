@@ -96,6 +96,11 @@
   # Allow Unfree Software
   nixpkgs.config.allowUnfree = true;
 
+# Allow Insecure Packages
+  nixpkgs.config.permittedInsecurePackages = [
+    "pulsar-1.129.0"  # Pulsar editor
+  ];
+
   # System Packages (The "Base" layer)
   environment.systemPackages = with pkgs; [
 
@@ -130,6 +135,7 @@
   programs.zsh.enable=true;
 
   # suckless tools
+  /*
   nixpkgs.overlays = [
     (final: prev: {
       dwm = prev.dwm.overrideAttrs (old: {
@@ -146,6 +152,7 @@
       });
     })
   ];
+  */
 
   services.xserver = {
     enable = true;
