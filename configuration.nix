@@ -20,13 +20,13 @@
         insmod btrfs
         cryptomount -u d3719f1599c842178b8e6c0384732c4e
         set root='(crypto0)'
-        linux /@/boot/vmlinuz-linux-zen rw rootflags=subvol=@ cryptdevice=d3719f15-99c8-4217-8b8e-6c0384732c4e:cryptdev root=/dev/mapper/cryptdev quiet
+        linux /@/boot/vmlinuz-linux-zen rw rootflags=subvol=@ cryptdevice=UUID=d3719f15-99c8-4217-8b8e-6c0384732c4e:cryptdev root=/dev/mapper/cryptdev quiet
         initrd /@/boot/amd-ucode.img /@/boot/initramfs-linux-zen.img
         }
     '';
   };
   boot.loader.efi.canTouchEfiVariables = true; # EFI vars
-  # NixOS initrd unlocks the cryptdrive so it can mount arch_home
+  # NixOS initrd unlocks the cryptdrive so it can mount arch_home/ved
   boot.initrd.luks.devices."cryptdev".device = "/dev/disk/by-uuid/d3719f15-99c8-4217-8b8e-6c0384732c4e";
 
   # 2. Mount Arch Home partition
@@ -36,13 +36,20 @@
     options = [ "subvol=@home" ]; # subvol name
   };
 
+  # 3. Mount Arch Root partition
+  fileSystems."/home/ved/arch_root" = {
+    device = "/dev/mapper/cryptdev";
+    fsType = "btrfs";
+    options = [ "subvol=@" ]; # subvol name
+  };
+
   # Networking
   networking.hostName = "thinkpad";
   networking.networkmanager.enable = true; # nm-cli applet needs this
 
   # Time & Locale
   time.timeZone = "America/Los_Angeles";
-  i18n.defaultLocale = "en_US.UTF_8";
+  i18n.defaultLocale = "en_US.UTF-8";
   i18n.extraLocaleSettings = {
     LC_MONETARY = "en_US.UTF-8";
     LC_TELEPHONE = "en_US.UTF-8";
@@ -102,8 +109,7 @@
       slstatus
 
       # Workflow
-      pulsar       # Editor
-      firefox      # Backup browser
+      #pulsar       # Editor
       git
       wget
       vim
@@ -111,10 +117,7 @@
       ranger
       ripgrep
       fd
-      cloudflare-warp
-
-      # Cloud
-      dropbox
+      cryptsetup
 
       # System Management
       pavucontrol  # Audio GUI
@@ -123,29 +126,32 @@
   ];
 
   # suckless tools
+  /*
   nixpkgs.overlays = [
     (final: prev: {
       dwm = prev.dwm.overrideAttrs (old: {
-        src = /home/ved/arch_home/repos/dwm;
+        src = /home/ved/arch_home/ved/repos/dwm;
       });
       dmenu = prev.dmenu.overrideAttrs (old: {
-        src = /home/ved/arch_home/repos/dmenu;
+        src = /home/ved/arch_home/ved/repos/dmenu;
       });
       st = prev.st.overrideAttrs (old: {
-        src = /home/ved/arch_home/repos/st;
+        src = /home/ved/arch_home/ved/repos/st;
       });
       slstatus = prev.slstatus.overrideAttrs (old: {
-        src = /home/ved/arch_home/repos/slstatus;
+        src = /home/ved/arch_home/ved/repos/slstatus;
       });
     })
   ];
+  */
+  programs.zsh.enable=true;
 
   services.xserver = {
     enable = true;
     windowManager.dwm.enable = true;
     displayManager.startx.enable = true; # Keep it simple, or use a DM like sddm
-    libinput.enable = true; # Enable touchpad support
   };
+  services.libinput.enable = true; # Enable touchpad support
 
   # Fonts
   fonts.packages = with pkgs; [

@@ -20,13 +20,13 @@
       system = "x86_64-linux";
       specialArgs = { inherit inputs; };
       modules = [
-        ./hosts/thinkpad/configuration.nix
+        ./configuration.nix
         nixos-hardware.nixosModules.lenovo-thinkpad-t14s-amd-gen4 # Gen 5 profile might not be explicit yet, Gen 4 is very close for HawkPoint
         home-manager.nixosModules.home-manager
         {
           home-manager.useGlobalPkgs = true;
           home-manager.useUserPackages = true;
-          home-manager.users.ved = import ./home/ved/home.nix;
+          home-manager.users.ved = import ./home.nix;
         }
       ];
     };
