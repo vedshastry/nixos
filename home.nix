@@ -50,8 +50,8 @@
   # Git Config
   programs.git = {
     enable = true;
-    userName = "Ved Shastry";
-    userEmail = "vedarshis@gmail.com";
+    settings.user.name = "Ved Shastry";
+    settings.user.email = "vedarshis@gmail.com";
   };
 
   home.stateVersion = "25.11";
