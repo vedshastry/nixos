@@ -26,6 +26,10 @@
         {
           home-manager.useGlobalPkgs = true;
           home-manager.useUserPackages = true;
+
+          # This passes 'inputs' to home.nix, fixing the "missing attribute" error
+          home-manager.extraSpecialArgs = { inherit inputs; };
+
           home-manager.users.ved = import ./home.nix;
         }
       ];

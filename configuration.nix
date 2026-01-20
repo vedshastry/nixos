@@ -118,6 +118,7 @@
       ripgrep
       fd
       cryptsetup
+      zsh
 
       # System Management
       pavucontrol  # Audio GUI
@@ -125,8 +126,10 @@
 
   ];
 
+  # enable zsh
+  programs.zsh.enable=true;
+
   # suckless tools
-  /*
   nixpkgs.overlays = [
     (final: prev: {
       dwm = prev.dwm.overrideAttrs (old: {
@@ -143,8 +146,6 @@
       });
     })
   ];
-  */
-  programs.zsh.enable=true;
 
   services.xserver = {
     enable = true;
