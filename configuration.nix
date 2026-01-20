@@ -140,21 +140,28 @@
   # suckless tools
   nixpkgs.overlays = [
     (final: prev: {
+
       dwm = prev.dwm.overrideAttrs (old: {
         src = inputs.my-dwm;
         nativeBuildInputs = (old.nativeBuildInputs or []) ++ [ prev.git prev.pkg-config ];
-	buildInputs = (old.buildInputs or []) ++ [ prev.xorg.libxcb prev.xorg.xcbutil prev.xorg.xcbutilwm ];
+        buildInputs = (old.buildInputs or []) ++ [ prev.xorg.libxcb prev.xorg.xcbutil prev.xorg.xcbutilwm ];
 
+        # Clean old binaries
         preBuild = ''
           make clean
         '';
 
-        postPatch = ''
-          ${old.postPatch or ""}
-	  sed -i "s:/usr/local:$out:g" config.mk
+        # --- THE FIX ---
+        # Instead of relying on 'make install' and 'makeFlags', we manually copy the binary.
+        # This guarantees it ends up in $out/bin/dwm where NixOS expects it.
+        installPhase = ''
+          mkdir -p $out/bin
+          cp dwm $out/bin/
+          
+          # Optional: Copy man pages if you want 'man dwm' to work
+          mkdir -p $out/share/man/man1
+          cp dwm.1 $out/share/man/man1/
         '';
-
-	makeFlags = [ "PREFIX=$out" ];
       });
 
       st = prev.st.overrideAttrs (old: {
