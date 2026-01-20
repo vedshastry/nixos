@@ -142,15 +142,19 @@
     (final: prev: {
       dwm = prev.dwm.overrideAttrs (old: {
         src = inputs.my-dwm;
+        nativeBuildInputs = (old.nativeBuildInputs or []) ++ [ prev.git ];
       });
       st = prev.st.overrideAttrs (old: {
         src = inputs.my-st;
+        nativeBuildInputs = (old.nativeBuildInputs or []) ++ [ prev.git ];
       });
       dmenu = prev.dmenu.overrideAttrs (old: {
         src = inputs.my-dmenu;
+        nativeBuildInputs = (old.nativeBuildInputs or []) ++ [ prev.git ];
       });
       slstatus = prev.slstatus.overrideAttrs (old: {
         src = inputs.my-slstatus;
+        nativeBuildInputs = (old.nativeBuildInputs or []) ++ [ prev.git ];
       });
     })
   ];
