@@ -142,11 +142,19 @@
     (final: prev: {
       dwm = prev.dwm.overrideAttrs (old: {
         src = inputs.my-dwm;
-        nativeBuildInputs = (old.nativeBuildInputs or []) ++ [ prev.git ];
+        nativeBuildInputs = (old.nativeBuildInputs or []) ++ [ prev.git prev.pkg-config ];
+	buildInputs = (old.buildInputs or []) ++ [ prev.xorg.libxcb prev.xorg.xcbutil prev.xorg.xcbutilwm ];
 
         preBuild = ''
           make clean
         '';
+
+        postPatch = ''
+          ${old.postPatch or ""}
+	  sed -i "s:/usr/local:$out:g" config.mk
+        '';
+
+	makeFlags = [ "PREFIX=$out" ];
       });
 
       st = prev.st.overrideAttrs (old: {
