@@ -38,8 +38,8 @@
     neovim
     python3
     R
+    qgis
     #julia
-    #qgis
     
     # Apps
     keepassxc
@@ -49,6 +49,14 @@
     emacs
     syncthing
     obsidian
+    obs-studio
+    tor
+    libreoffice
+    thunar
+    autorandr
+    zathura
+    xarchiver
+
   ];
 
   # ZSH Config (Migrating from Antibody)

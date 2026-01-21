@@ -26,22 +26,30 @@
     '';
   };
   boot.loader.efi.canTouchEfiVariables = true; # EFI vars
-  # NixOS initrd unlocks the cryptdrive so it can mount arch_home/ved
+  # NixOS initrd unlocks the cryptdrive so it can mount arch/home/ved
   boot.initrd.luks.devices."cryptdev".device = "/dev/disk/by-uuid/d3719f15-99c8-4217-8b8e-6c0384732c4e";
+  # for NTFS support
+  boot.supportedFilesystems = [ "ntfs" ];
 
   # 2. Mount Arch Home partition
-  fileSystems."/home/ved/arch_home" = {
+  fileSystems."/home/ved/arch/home" = {
     device = "/dev/mapper/cryptdev";
     fsType = "btrfs";
     options = [ "subvol=@home" ]; # subvol name
   };
 
   # 3. Mount Arch Root partition
-  fileSystems."/home/ved/arch_root" = {
+  fileSystems."/home/ved/arch" = {
     device = "/dev/mapper/cryptdev";
     fsType = "btrfs";
     options = [ "subvol=@" ]; # subvol name
   };
+
+	# Mount NTFS
+	fileSystems."/mnt/d" = {
+	  device = "/dev/disk/by-uuid/26C43682C43653F1";
+	  fsType = "ntfs3";
+	};
 
   # Networking
   networking.hostName = "thinkpad";
@@ -134,6 +142,13 @@
 
   ];
 
+  services.xserver = {
+    enable = true;
+    windowManager.dwm.enable = true;
+    displayManager.startx.enable = true; # Keep it simple, or use a DM like sddm
+  };
+  services.libinput.enable = true; # Enable touchpad support
+
   # enable zsh
   programs.zsh.enable=true;
 
@@ -169,6 +184,11 @@
         nativeBuildInputs = (old.nativeBuildInputs or []) ++ [ prev.git prev.pkg-config ];
 	      buildInputs = (old.buildInputs or []) ++ [ prev.harfbuzz ];
 
+        # Clean old binaries
+        preBuild = ''
+          make clean
+        '';
+
         postPatch = ''
         ${old.postPatch or ""}
         sed -i '/git submodule/d' Makefile
@@ -178,21 +198,26 @@
       dmenu = prev.dmenu.overrideAttrs (old: {
         src = inputs.my-dmenu;
         nativeBuildInputs = (old.nativeBuildInputs or []) ++ [ prev.git ];
+
+        # Clean old binaries
+        preBuild = ''
+          make clean
+        '';
+
       });
 
       slstatus = prev.slstatus.overrideAttrs (old: {
         src = inputs.my-slstatus;
         nativeBuildInputs = (old.nativeBuildInputs or []) ++ [ prev.git ];
+
+        # Clean old binaries
+        preBuild = ''
+          make clean
+        '';
+
       });
     })
   ];
-
-  services.xserver = {
-    enable = true;
-    windowManager.dwm.enable = true;
-    displayManager.startx.enable = true; # Keep it simple, or use a DM like sddm
-  };
-  services.libinput.enable = true; # Enable touchpad support
 
   # Fonts
   fonts = {
