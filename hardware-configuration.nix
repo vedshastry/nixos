@@ -8,6 +8,10 @@
     [ (modulesPath + "/installer/scan/not-detected.nix")
     ];
 
+  # ThinkPad T14 Gen 5
+  boot.kernelPackages = pkgs.linuxPackages_latest; # 6.12+ kernel for HawkPoint APU
+  services.fwupd.enable = true; # Firmware updates
+
   # Boot options
   boot.initrd.availableKernelModules = [ "nvme" "xhci_pci" "thunderbolt" "usbhid" "usb_storage" "sd_mod" ];
   boot.initrd.kernelModules = [ ];

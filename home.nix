@@ -7,6 +7,7 @@
   # Install User Packages
   home.packages = with pkgs; [
     # Core Tools
+    zsh # Shell
     ripgrep fd unzip jq tree
     ranger
 
@@ -29,10 +30,10 @@
     pasystray
     solaar
 
-    
+
     # Browsers
     inputs.zen-browser.packages."${pkgs.system}".default
-    
+
     # Research / Dev
     pulsar
     neovim
@@ -40,7 +41,7 @@
     R
     qgis
     #julia
-    
+
     # Apps
     keepassxc
     slack
@@ -65,7 +66,7 @@
     enableCompletion = true;
     autosuggestion.enable = true;
     syntaxHighlighting.enable = true;
-    
+
     # Oh-My-Zsh is easiest, but you can list manual plugins too
     oh-my-zsh = {
       enable = true;
