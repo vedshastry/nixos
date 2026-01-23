@@ -8,11 +8,60 @@
     [ (modulesPath + "/installer/scan/not-detected.nix")
     ];
 
+  # Boot options
   boot.initrd.availableKernelModules = [ "nvme" "xhci_pci" "thunderbolt" "usbhid" "usb_storage" "sd_mod" ];
   boot.initrd.kernelModules = [ ];
   boot.kernelModules = [ "kvm-amd" ];
   boot.extraModulePackages = [ ];
   boot.supportedFilesystems = [ "ntfs" ];
+  boot.loader.efi.canTouchEfiVariables = true; # EFI vars
+
+  # GRUB
+  boot.loader.systemd-boot.enable = false; # Disable systemd-boot
+  boot.loader.grub = {     # GRUB options
+    enable = true;
+    device = "nodev";      # "nodev" is correct for EFI
+    efiSupport = true;
+    enableCryptodisk = true; # mount encrypted partitions
+    useOSProber = true;    # run os-prober
+    efiInstallAsRemovable = false; # Allow GRUB to modify EFI variables
+
+    # GRUB cmdline entries
+    extraEntries = ''
+        menuentry "Arch Linux" {
+        insmod luks
+        insmod btrfs
+        cryptomount -u d3719f1599c842178b8e6c0384732c4e
+        set root='(crypto0)'
+        linux /@/boot/vmlinuz-linux-zen rw rootflags=subvol=@ cryptdevice=UUID=d3719f15-99c8-4217-8b8e-6c0384732c4e:cryptdev root=/dev/mapper/cryptdev quiet
+        initrd /@/boot/amd-ucode.img /@/boot/initramfs-linux-zen.img
+        }
+    '';
+  };
+
+  # NixOS initrd unlocks the encrypted partition to mount
+  boot.initrd.luks.devices."cryptdev".device = "/dev/disk/by-uuid/d3719f15-99c8-4217-8b8e-6c0384732c4e";
+
+  # 2. Mount Arch Home partition
+  fileSystems."/home/ved/arch/home" = {
+    device = "/dev/mapper/cryptdev";
+    fsType = "btrfs";
+    options = [ "subvol=@home" ]; # subvol name
+  };
+
+  # 3. Mount Arch Root partition
+  fileSystems."/home/ved/arch" = {
+    device = "/dev/mapper/cryptdev";
+    fsType = "btrfs";
+    options = [ "subvol=@" ]; # subvol name
+  };
+
+	# Mount NTFS
+	fileSystems."/mnt/d" = {
+	  device = "/dev/disk/by-uuid/26C43682C43653F1";
+	  fsType = "ntfs3";
+	};
+
 
   fileSystems."/" =
     { device = "/dev/disk/by-uuid/ad11104f-f8b7-4bbd-9739-9fcd4ba76581";
