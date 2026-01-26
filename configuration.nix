@@ -65,6 +65,7 @@
     # Audio (pipewire)
       services.pipewire = {
         enable = true;
+        audio.enable = true;
         alsa.enable = true;
         alsa.support32Bit = true; # ALSA Legacy
         pulse.enable = true; # Pipewire - pulse
@@ -110,9 +111,12 @@
       xdotool
       xclip
       via
+      light
+      alsa-utils
 
-  # Cloudflare WARP
+  # Networking
   cloudflare-warp
+
 
   # XFCE
   xfce4-power-manager
