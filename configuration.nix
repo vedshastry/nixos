@@ -35,6 +35,10 @@
   };
   # Enable non-root access to QMK/VIA keyboards
   hardware.keyboard.qmk.enable = true;
+  # If the standard QMK rule doesn't catch the NuPhy V2
+  services.udev.extraRules = ''
+    KERNEL=="hidraw*", SUBSYSTEM=="hidraw", ATTRS{idVendor}=="19f5", MODE="0660", GROUP="users", TAG+="uaccess", TAG+="udev-acl"
+  '';
 
   # Enable Bluetooth
   hardware.bluetooth.enable = true;
@@ -107,6 +111,9 @@
       xclip
       via
 
+  # Cloudflare WARP
+  cloudflare-warp
+
   # XFCE
   xfce4-power-manager
 
@@ -163,7 +170,7 @@ programs.nix-ld.libraries = with pkgs; [
     xdg.portal = {
       enable = true;
       extraPortals = [ pkgs.xdg-desktop-portal-gtk ];
-      config.common.default = "*";
+      config.common.default = "gtk";
     };
 
   # suckless tools

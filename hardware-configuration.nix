@@ -62,18 +62,18 @@
   # NixOS initrd unlocks the encrypted partition to mount
   boot.initrd.luks.devices."cryptdev".device = "/dev/disk/by-uuid/d3719f15-99c8-4217-8b8e-6c0384732c4e";
 
-  # 2. Mount Arch Home partition
-  fileSystems."/mnt/arch/home" = {
-    device = "/dev/mapper/cryptdev";
-    fsType = "btrfs";
-    options = [ "subvol=@home" ]; # subvol name
-  };
-
-  # 3. Mount Arch Root partition
+  # Mount Arch Root partition
   fileSystems."/mnt/arch" = {
     device = "/dev/mapper/cryptdev";
     fsType = "btrfs";
-    options = [ "subvol=@" ]; # subvol name
+    options = [ "subvol=@" "noatime" "compress=zstd"]; # subvol name
+  };
+
+  # Mount Arch Home partition
+  fileSystems."/mnt/arch/home" = {
+    device = "/dev/mapper/cryptdev";
+    fsType = "btrfs";
+    options = [ "subvol=@home" "noatime" "compress=zstd"]; # subvol name
   };
 
 	# Mount NTFS
@@ -86,13 +86,13 @@
   fileSystems."/" =
     { device = "/dev/disk/by-uuid/ad11104f-f8b7-4bbd-9739-9fcd4ba76581";
       fsType = "btrfs";
-      options = [ "subvol=@" ];
+      options = [ "subvol=@" "noatime" "compress=zstd" ]; # subvol name
     };
 
   fileSystems."/home" =
     { device = "/dev/disk/by-uuid/ad11104f-f8b7-4bbd-9739-9fcd4ba76581";
       fsType = "btrfs";
-      options = [ "subvol=@home" ];
+      options = [ "subvol=@home" "noatime" "compress=zstd"]; # subvol name
     };
 
   fileSystems."/boot" =
