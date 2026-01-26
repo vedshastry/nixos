@@ -3,9 +3,9 @@
 
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable"; # Rolling updates
-    
+
     # Specific hardware tweaks for ThinkPad T14 Gen 5 (AMD)
-    nixos-hardware.url = "github:NixOS/nixos-hardware/master"; 
+    nixos-hardware.url = "github:NixOS/nixos-hardware/master";
 
     # Home Manager for user configuration
     home-manager.url = "github:nix-community/home-manager";
@@ -14,14 +14,17 @@
     # Zen Browser Flake
     zen-browser.url = "github:0xc000022070/zen-browser-flake";
 
+    # Pulsar editor
+    #pulsar-flake.url = "github:pulsar-edit/pulsar/v1.130.1";
+    
     # Suckless tools
+    # these are standard C repos and not flakes, so flake = false
     my-dwm = {
     url = "github:vedshastry/dwm";
-    flake = false; 		# these are standard C repos not flakes, so flake = false
+    flake = false;
     };
     my-st = {
-    #url = "github:vedshastry/st";
-    url = "git+https://github.com/vedshastry/st.git?submodules=1";
+    url = "github:vedshastry/st";
     flake = false;
     };
     my-dmenu = {
@@ -39,13 +42,13 @@
       specialArgs = { inherit inputs; };
       modules = [
         ./configuration.nix
-        nixos-hardware.nixosModules.lenovo-thinkpad-t14s-amd-gen4 # Gen 5 profile might not be explicit yet, Gen 4 is very close for HawkPoint
+        nixos-hardware.nixosModules.lenovo-thinkpad-t14-amd-gen5 # Gen 5 profile might not be explicit yet, Gen 4 is very close for HawkPoint
         home-manager.nixosModules.home-manager
         {
           home-manager.useGlobalPkgs = true;
           home-manager.useUserPackages = true;
 
-        # Backup file extension 
+        # Backup file extension
           home-manager.backupFileExtension = "bak";
 
           # This passes 'inputs' to home.nix, fixing the "missing attribute" error

@@ -33,9 +33,13 @@
     enable = true;
     enable32Bit = true; # for legacy support
   };
+  # Enable non-root access to QMK/VIA keyboards
+  hardware.keyboard.qmk.enable = true;
+
   # Enable Bluetooth
   hardware.bluetooth.enable = true;
   hardware.bluetooth.powerOnBoot = true; # Power up the default controller on boot
+  services.blueman.enable = true; # Enables the Blueman service, Polkit rules, and D-Bus integration
 
   # Services
 
@@ -49,8 +53,10 @@
       services.libinput.enable = true; # Enable touchpad support
       services.printing.enable = true; # Printing
       security.rtkit.enable = true; # Scheduling
-      security.polkit.enable = true; # access for GUI apps 
+      security.polkit.enable = true; # access for GUI apps
       services.pulseaudio.enable = false; # Disable pulse for pipewire
+      services.gvfs.enable = true; # Mount, trash, and remote filesystem support
+      services.tumbler.enable = true; # Thumbnail support for Thunar
 
     # Audio (pipewire)
       services.pipewire = {
@@ -59,6 +65,7 @@
         alsa.support32Bit = true; # ALSA Legacy
         pulse.enable = true; # Pipewire - pulse
         jack.enable = true;
+        wireplumber.enable = true;
       };
 
   # Cloudflare WARP (Systemd Service)
@@ -98,13 +105,17 @@
       brightnessctl
       xdotool
       xclip
+      via
 
   # XFCE
   xfce4-power-manager
 
   # GNOME
+  gtk3
+  gsettings-desktop-schemas
   gnomeExtensions.appindicator
   libappindicator
+  polkit_gnome
 
   # Progs
   nodejs
@@ -147,6 +158,13 @@ programs.nix-ld.libraries = with pkgs; [
 
 # Enable dconf
   programs.dconf.enable = true;
+
+  # Enable XDG Portals
+    xdg.portal = {
+      enable = true;
+      extraPortals = [ pkgs.xdg-desktop-portal-gtk ];
+      config.common.default = "*";
+    };
 
   # suckless tools
   nixpkgs.overlays = [
@@ -229,7 +247,7 @@ programs.nix-ld.libraries = with pkgs; [
 	  fontconfig = {
 	    enable = true;
 	    defaultFonts = {
-	      monospace = [ "JetBrainsMono Nerd Font" ];
+	      monospace = [ "NotoMono Nerd Font" ];
 	      serif = [ "Noto Serif" ];
 	      sansSerif = [ "Noto Sans" ];
 	    };

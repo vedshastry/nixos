@@ -10,6 +10,7 @@
     zsh # Shell
     ripgrep fd unzip jq tree
     ranger
+    lf
 
     # Standard progs (xinit)
     picom
@@ -32,16 +33,26 @@
 
     # Browsers
     inputs.zen-browser.packages."${pkgs.system}".default
+    google-chrome
+    librewolf
+
 
     # Research / Dev
     texlive.combined.scheme-full
     texlab # language server for neovim
-    pulsar
+    pulsar # inputs.pulsar-flake.packages.${pkgs.system}.default
     neovim
-    python3
     R
     qgis
-    #julia
+    julia-bin
+    # Python with default packages
+    (python3.withPackages (ps: with ps; [
+      pandas
+      numpy
+      matplotlib
+      ipykernel
+    ]))
+    gimp
 
     # Apps
     keepassxc
@@ -50,7 +61,6 @@
     slack
     touchegg
     emacs
-    syncthing
     obsidian
     obs-studio
     tor
@@ -77,13 +87,12 @@
   ];
 
   # XDG Defaults
-
-  # File manager
-  #programs.thunar.enable = true;
-  #xdg.mimeApps = {
-  #  "inode/directory" = "thunar.desktop";
-  #  "x-directory/normal" = "thunar.desktop";
-  #};
+      xdg.mimeApps = {
+        enable = true;
+        defaultApplications = {
+          "inode/directory" = [ "thunar.desktop" ];
+        };
+      };
 
   # Git Config
   programs.git = {
@@ -99,6 +108,8 @@
       BROWSER = "zen";
       PDFVIEWER = "zathura";
       OPENER = "rifle";
+      XDG_CURRENT_DESKTOP = "gtk"; # Tells Electron/GTK to use the GTK file chooser portal
+      GTK_USE_PORTAL = "1";
     };
 
     # 2. Global Paths (Replaces export PATH=...)
@@ -155,6 +166,7 @@
 
       # 3. MIGRATE COMPLEX LOGIC (.zshrc + .zprofile)
       initContent = ''
+
         # --- Custom Prompt (Ported from your config) ---
         PROMPT='%F{white}%n%f@%F{green}%m%f %F{blue}%B%~%b%f %# '
         RPROMPT='[%F{yellow}%?%f]'
@@ -162,11 +174,17 @@
         # --- Bindkeys ---
         bindkey -v
 
+        # --- Fix for GTK/Electron Apps in dwm ---
+        # Append the gsettings-desktop-schemas path to XDG_DATA_DIRS
+        export XDG_DATA_DIRS="${pkgs.gsettings-desktop-schemas}/share/gsettings-schemas/${pkgs.gsettings-desktop-schemas.name}:${pkgs.gtk3}/share/gsettings-schemas/${pkgs.gtk3.name}:$XDG_DATA_DIRS"
+        
+        # Ensure the portal knows we are on a GTK-based desktop (fixes the portal crash that might happen NEXT)
+        export XDG_CURRENT_DESKTOP=gtk
+
         # --- StartX on Login (from .zprofile) ---
         if [ -z "''${DISPLAY}" ] && [ "''${XDG_VTNR}" -eq 1 ]; then
           exec startx
         fi
-
       '';
 
       # 4. MIGRATE ANTIBODY PLUGINS
@@ -195,7 +213,7 @@
     # 2. Configure GTK Declaratively
     gtk = {
       enable = true;
-      
+
       theme = {
         name = "Dracula";             # Must match the folder name exactly
         package = pkgs.dracula-theme; # Tells Nix where to find it
@@ -217,14 +235,15 @@
     };
 
     # 4. Mouse Cursor (Applies to X11 root window and GTK)
+    home.file.".icons/default".source = "${pkgs.bibata-cursors}/share/icons/Bibata-Modern-Ice"; # link cursor icons to home
     home.pointerCursor = {
       gtk.enable = true;
-      name = "Volantes";               # Replace with your cursor name
+      name = "Bibata-Modern-Ice";               # Replace with your cursor name
       package = pkgs.bibata-cursors;
-      size = 24;
+      size = 20;
     };
 
-    # QT -> GTK 
+    # QT -> GTK
     qt = {
         enable = true;
         platformTheme.name = "gtk"; # Tell Qt apps to look like GTK apps
@@ -234,6 +253,11 @@
 
   # Services
   services.blueman-applet.enable = true;
+  services.syncthing = {
+  enable = true;
+  # This ensures the tray icon starts too
+  tray.enable = true;
+  };
 
   # Version
   home.stateVersion = "25.11";

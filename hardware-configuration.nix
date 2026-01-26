@@ -10,6 +10,7 @@
 
   # ThinkPad T14 Gen 5
   boot.kernelPackages = pkgs.linuxPackages_latest; # 6.12+ kernel for HawkPoint APU
+  #boot.kernelPackages = pkgs.linuxPackages_zen; # Linux-zen kernel
   services.fwupd.enable = true; # Firmware updates
 
   # Boot options
@@ -36,10 +37,10 @@
     extraConfig = ''
     # Normal text: Light gray on black
     set color_normal=light-gray/black
-    
+
     # Highlighted text: Light blue on black
     set color_highlight=light-blue/black
-    
+
     # Menu border
     set menu_color_normal=light-gray/black
     set menu_color_highlight=light-blue/black

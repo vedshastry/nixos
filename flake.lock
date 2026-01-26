@@ -94,17 +94,15 @@
       "locked": {
         "lastModified": 1665079124,
         "narHash": "sha256-NT/mlGJw6ma5n6jQOKdx7ALS70jFqNIU27RrXVT712Y=",
-        "ref": "refs/heads/master",
+        "owner": "vedshastry",
+        "repo": "st",
         "rev": "9f7eea4e4abfe4859505903fc941332c99d9b4d0",
-        "revCount": 1185,
-        "submodules": true,
-        "type": "git",
-        "url": "https://github.com/vedshastry/st.git"
+        "type": "github"
       },
       "original": {
-        "submodules": true,
-        "type": "git",
-        "url": "https://github.com/vedshastry/st.git"
+        "owner": "vedshastry",
+        "repo": "st",
+        "type": "github"
       }
     },
     "nixos-hardware": {
