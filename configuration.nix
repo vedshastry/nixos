@@ -33,6 +33,9 @@
     enable = true;
     enable32Bit = true; # for legacy support
   };
+  # Enable Bluetooth
+  hardware.bluetooth.enable = true;
+  hardware.bluetooth.powerOnBoot = true; # Power up the default controller on boot
 
   # Services
 
@@ -92,13 +95,19 @@
       fd
       cryptsetup
       brightnessctl
+      xdotool
+      xclip
 
   # XFCE
-  xfce.xfce4-power-manager
+  xfce4-power-manager
 
   # GNOME
   gnomeExtensions.appindicator
   libappindicator
+
+  # Progs
+  nodejs
+  pyright ## for neovim Mason loading LSP config
 
     # System Management
     pavucontrol  # Audio GUI
@@ -226,6 +235,9 @@ programs.nix-ld.libraries = with pkgs; [
 	  };
   };
 
+
+  # Other nix settings
+  nix.settings.experimental-features = ["nix-command" "flakes"];
 
 
   # Leave at the release version of first install (25.11)

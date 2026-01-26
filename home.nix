@@ -35,6 +35,8 @@
     inputs.zen-browser.packages."${pkgs.system}".default
 
     # Research / Dev
+    texlive.combined.scheme-full
+    texlab # language server for neovim
     pulsar
     neovim
     python3
@@ -58,6 +60,7 @@
     autorandr
     zathura
     xarchiver
+    sxiv
 
   # AI
     gemini-cli-bin
@@ -66,6 +69,7 @@
     claude-monitor
 
   # Themes
+    gnome-tweaks
     dracula-theme           # The GTK theme
     dracula-icon-theme      # The Icon theme (if you use Dracula icons)
     # bibata-cursors        # Example: Add your cursor theme package here if needed
@@ -87,6 +91,22 @@
     settings.user.name = "Ved Shastry";
     settings.user.email = "vedarshis@gmail.com";
   };
+
+    # 1. Global Variables (Replaces exports in .zshenv/.zprofile)
+    home.sessionVariables = {
+      EDITOR = "nvim";
+      VISUAL = "nvim";
+      BROWSER = "zen";
+      PDFVIEWER = "zathura";
+      OPENER = "rifle";
+    };
+
+    # 2. Global Paths (Replaces export PATH=...)
+    home.sessionPath = [
+      "$HOME/scripts"
+      "$HOME/ado"
+      "/opt/stata18"
+    ];
 
   # Zsh config
     programs.zsh = {
@@ -134,7 +154,7 @@
       };
 
       # 3. MIGRATE COMPLEX LOGIC (.zshrc + .zprofile)
-      initExtra = ''
+      initContent = ''
         # --- Custom Prompt (Ported from your config) ---
         PROMPT='%F{white}%n%f@%F{green}%m%f %F{blue}%B%~%b%f %# '
         RPROMPT='[%F{yellow}%?%f]'
@@ -147,10 +167,6 @@
           exec startx
         fi
 
-        # --- Manual PATH additions (if absolutely necessary) ---
-        # In Nix, prefer installing tools via home.packages, but if you have legacy scripts:
-        export PATH=$HOME/scripts:$HOME/ado:$PATH
-        export PATH=/opt/stata18:$PATH
       '';
 
       # 4. MIGRATE ANTIBODY PLUGINS
@@ -192,7 +208,7 @@
 
       font = {
         name = "Noto Sans";
-        size = 11;
+        size = 10;
       };
 
       # 3. Handling GTK2 (The old stuff)
@@ -203,17 +219,22 @@
     # 4. Mouse Cursor (Applies to X11 root window and GTK)
     home.pointerCursor = {
       gtk.enable = true;
-      x11.enable = true;            # Required for the cursor to show on the desktop background
       name = "Volantes";               # Replace with your cursor name
       package = pkgs.volantes-cursors;
       size = 24;
     };
 
+    # QT -> GTK 
     qt = {
         enable = true;
         platformTheme.name = "gtk"; # Tell Qt apps to look like GTK apps
         style.name = "gtk2";
       };
 
-   home.stateVersion = "25.11";
+
+  # Services
+  services.blueman-applet.enable = true;
+
+  # Version
+  home.stateVersion = "25.11";
 }

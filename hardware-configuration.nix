@@ -29,6 +29,21 @@
     enableCryptodisk = true; # mount encrypted partitions
     useOSProber = true;    # run os-prober
     efiInstallAsRemovable = false; # Allow GRUB to modify EFI variables
+    theme = null;
+    splashImage = null;
+    backgroundColor = "black";
+
+    extraConfig = ''
+    # Normal text: Light gray on black
+    set color_normal=light-gray/black
+    
+    # Highlighted text: Light blue on black
+    set color_highlight=light-blue/black
+    
+    # Menu border
+    set menu_color_normal=light-gray/black
+    set menu_color_highlight=light-blue/black
+    '';
 
     # GRUB cmdline entries
     extraEntries = ''

@@ -45,6 +45,9 @@
           home-manager.useGlobalPkgs = true;
           home-manager.useUserPackages = true;
 
+        # Backup file extension 
+          home-manager.backupFileExtension = "bak";
+
           # This passes 'inputs' to home.nix, fixing the "missing attribute" error
           home-manager.extraSpecialArgs = { inherit inputs; };
 

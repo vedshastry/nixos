@@ -1,4 +1,4 @@
-# NixOS Configuration (ThinkPad T14 Gen 5 AMD)
+# NixOS Config
 
 This repository contains a declarative **NixOS** configuration for a **Lenovo ThinkPad T14 Gen 5 (AMD)**. It features a fully reproducible system state, a custom **suckless** desktop environment, and seamless integration with an existing **Arch Linux** dual-boot installation.
 
