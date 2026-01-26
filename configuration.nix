@@ -135,6 +135,8 @@ programs.nix-ld.libraries = with pkgs; [
   fontconfig
 ];
 
+# Enable dconf
+  programs.dconf.enable = true;
 
   # suckless tools
   nixpkgs.overlays = [

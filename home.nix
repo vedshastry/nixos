@@ -19,6 +19,7 @@
     numlockx
 
     # x11 utils
+    xdg-utils
     xorg.xset
     xorg.setxkbmap
     xorg.xsetroot
@@ -58,7 +59,27 @@
     zathura
     xarchiver
 
+  # AI
+    gemini-cli-bin
+    geminicommit
+    claude-code
+    claude-monitor
+
+  # Themes
+    dracula-theme           # The GTK theme
+    dracula-icon-theme      # The Icon theme (if you use Dracula icons)
+    # bibata-cursors        # Example: Add your cursor theme package here if needed
+
   ];
+
+  # XDG Defaults
+
+  # File manager
+  #programs.thunar.enable = true;
+  #xdg.mimeApps = {
+  #  "inode/directory" = "thunar.desktop";
+  #  "x-directory/normal" = "thunar.desktop";
+  #};
 
   # Git Config
   programs.git = {
@@ -88,7 +109,7 @@
         sv = "sudo nvim";
 
         # NixOS specifics (replacing your 'p=sudo pacman')
-        update = "sudo nixos-rebuild switch --flake ~/nixos-config#thinkpad";
+        update = "sudo nixos-rebuild switch --flake ~/repos/nixos#thinkpad";
 
         # Workflow
         lad = "ls -d .*(/)"; # Only dot-directories
@@ -129,6 +150,7 @@
         # --- Manual PATH additions (if absolutely necessary) ---
         # In Nix, prefer installing tools via home.packages, but if you have legacy scripts:
         export PATH=$HOME/scripts:$HOME/ado:$PATH
+        export PATH=/opt/stata18:$PATH
       '';
 
       # 4. MIGRATE ANTIBODY PLUGINS
@@ -151,5 +173,47 @@
       };
     };
 
-  home.stateVersion = "25.11";
+    ############ THEMES
+
+
+    # 2. Configure GTK Declaratively
+    gtk = {
+      enable = true;
+      
+      theme = {
+        name = "Dracula";             # Must match the folder name exactly
+        package = pkgs.dracula-theme; # Tells Nix where to find it
+      };
+
+      iconTheme = {
+        name = "Dracula";             # Or "Papirus-Dark", etc.
+        package = pkgs.dracula-icon-theme;
+      };
+
+      font = {
+        name = "Noto Sans";
+        size = 11;
+      };
+
+      # 3. Handling GTK2 (The old stuff)
+      gtk2.configLocation = "${config.xdg.configHome}/gtk-2.0/gtkrc";
+      # This writes to ~/.config/gtk-2.0/gtkrc instead of cluttering ~ with .gtkrc-2.0
+    };
+
+    # 4. Mouse Cursor (Applies to X11 root window and GTK)
+    home.pointerCursor = {
+      gtk.enable = true;
+      x11.enable = true;            # Required for the cursor to show on the desktop background
+      name = "Volantes";               # Replace with your cursor name
+      package = pkgs.volantes-cursors;
+      size = 24;
+    };
+
+    qt = {
+        enable = true;
+        platformTheme.name = "gtk"; # Tell Qt apps to look like GTK apps
+        style.name = "gtk2";
+      };
+
+   home.stateVersion = "25.11";
 }
