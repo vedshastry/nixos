@@ -30,7 +30,6 @@
     pasystray
     solaar
 
-
     # Browsers
     inputs.zen-browser.packages."${pkgs.system}".default
 
@@ -61,6 +60,7 @@
     zathura
     xarchiver
     sxiv
+    libnotify
 
   # AI
     gemini-cli-bin
@@ -70,9 +70,9 @@
 
   # Themes
     gnome-tweaks
-    dracula-theme           # The GTK theme
-    dracula-icon-theme      # The Icon theme (if you use Dracula icons)
-    # bibata-cursors        # Example: Add your cursor theme package here if needed
+    dracula-theme           # GTK theme
+    dracula-icon-theme      # Icon theme
+    bibata-cursors
 
   ];
 
@@ -220,7 +220,7 @@
     home.pointerCursor = {
       gtk.enable = true;
       name = "Volantes";               # Replace with your cursor name
-      package = pkgs.volantes-cursors;
+      package = pkgs.bibata-cursors;
       size = 24;
     };
 

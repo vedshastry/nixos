@@ -49,6 +49,7 @@
       services.libinput.enable = true; # Enable touchpad support
       services.printing.enable = true; # Printing
       security.rtkit.enable = true; # Scheduling
+      security.polkit.enable = true; # access for GUI apps 
       services.pulseaudio.enable = false; # Disable pulse for pipewire
 
     # Audio (pipewire)
