@@ -9,8 +9,8 @@
     ];
 
   # ThinkPad T14 Gen 5
-  boot.kernelPackages = pkgs.linuxPackages_latest; # 6.12+ kernel for HawkPoint APU
-  #boot.kernelPackages = pkgs.linuxPackages_zen; # Linux-zen kernel
+  #boot.kernelPackages = pkgs.linuxPackages_latest; # 6.12+ kernel for HawkPoint APU
+  boot.kernelPackages = pkgs.linuxPackages_zen; # Linux-zen kernel
   services.fwupd.enable = true; # Firmware updates
 
   # Boot options
