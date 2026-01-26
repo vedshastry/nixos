@@ -47,14 +47,14 @@
   boot.initrd.luks.devices."cryptdev".device = "/dev/disk/by-uuid/d3719f15-99c8-4217-8b8e-6c0384732c4e";
 
   # 2. Mount Arch Home partition
-  fileSystems."/home/ved/arch/home" = {
+  fileSystems."/mnt/arch/home" = {
     device = "/dev/mapper/cryptdev";
     fsType = "btrfs";
     options = [ "subvol=@home" ]; # subvol name
   };
 
   # 3. Mount Arch Root partition
-  fileSystems."/home/ved/arch" = {
+  fileSystems."/mnt/arch" = {
     device = "/dev/mapper/cryptdev";
     fsType = "btrfs";
     options = [ "subvol=@" ]; # subvol name

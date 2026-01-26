@@ -26,6 +26,7 @@
     extraGroups = [ "networkmanager" "wheel" "docker" "video" "audio" ];
     shell = pkgs.zsh;
   };
+  programs.zsh.enable = true;
 
   # Graphics & Hardware
   hardware.graphics = {
@@ -62,12 +63,12 @@
 
   # Allow Unfree Software
   nixpkgs.config.allowUnfree = true;
-
-  # Package opts
-  programs.nix-ld.enable = true
   nixpkgs.config.permittedInsecurePackages = [
     "pulsar-1.129.0"  # permit Pulsar editor
   ];
+
+  # Package opts
+  programs.nix-ld.enable = true;
 
   # System Packages
   environment.systemPackages = with pkgs; [
@@ -81,6 +82,8 @@
 
       # Tools
       git
+      arandr
+      stow
       wget
       vim
       neovim
@@ -90,11 +93,47 @@
       cryptsetup
       brightnessctl
 
+  # XFCE
+  xfce.xfce4-power-manager
+
+  # GNOME
+  gnomeExtensions.appindicator
+  libappindicator
+
     # System Management
     pavucontrol  # Audio GUI
     htop
 
   ];
+
+# Libraries for nix-ld
+programs.nix-ld.libraries = with pkgs; [
+  gtk2
+  atk
+  pango
+  gdk-pixbuf
+  cairo
+  glibc
+  glib
+  gcc.cc
+  xorg.libX11
+  xorg.libXcursor
+  xorg.libXrandr
+  xorg.libXinerama
+  xorg.libXi
+  xorg.libXrender
+  xorg.libXtst
+  xorg.libxcb
+  xorg.libSM
+  xorg.libICE
+  libxcrypt
+  libuuid
+  ncurses5
+  zlib
+  stdenv.cc.cc
+  freetype
+  fontconfig
+];
 
 
   # suckless tools
@@ -184,6 +223,8 @@
 	    };
 	  };
   };
+
+
 
   # Leave at the release version of first install (25.11)
   # Before changing this value read the documentation for this option
