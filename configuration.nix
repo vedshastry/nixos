@@ -47,6 +47,47 @@
 
   # Services
 
+# Power Management (TLP)
+  services.power-profiles-daemon.enable = false; # Conflict with TLP
+  services.tlp = {
+    enable = true;
+    settings = {
+      # --- General Settings ---
+      TLP_ENABLE = 1;
+
+      # --- Battery Care (ThinkPad Specific) ---
+      # Start charging at 75%, stop at 80%. 
+      # For "Always on AC" usage to extend battery lifespan.
+      START_CHARGE_THRESH_BAT0 = 75;
+      STOP_CHARGE_THRESH_BAT0 = 80;
+
+      # --- CPU / Platform Profiles
+      # "performance" on AC allows the CPU to boost high for Stata
+      # "balanced" or "low-power" on BAT keeps it cool
+      PLATFORM_PROFILE_ON_AC = "performance";
+      PLATFORM_PROFILE_ON_BAT = "low-power";
+
+      # AMD P-State EPP (Energy Performance Preference)
+      # This is the modern replacement for "governors" on Zen 3/4
+      CPU_ENERGY_PERF_POLICY_ON_AC = "performance";
+      CPU_ENERGY_PERF_POLICY_ON_BAT = "balance_power";
+
+      # Scaling Governor (Fallback, but good to set)
+      CPU_SCALING_GOVERNOR_ON_AC = "performance";
+      CPU_SCALING_GOVERNOR_ON_BAT = "powersave";
+
+      # --- Boost Logic ---
+      # Allow Turbo Boost on AC
+      # Disable on Battery
+      CPU_BOOST_ON_AC = 1;
+      CPU_BOOST_ON_BAT = 0;
+
+      # --- Radio Devices ---
+      # Don't touch bluetooth on boot
+      # RESTORE_DEVICE_STATE_ON_STARTUP = 1;
+    };
+  };
+
     # Xorg server
       services.xserver = {
         enable = true;
@@ -62,6 +103,20 @@
       services.gvfs.enable = true; # Mount, trash, and remote filesystem support
       services.tumbler.enable = true; # Thumbnail support for Thunar
 
+  # Libinput opts
+  services.libinput = {
+      touchpad = {
+        naturalScrolling = false;
+        tapping = true;
+        tappingDragLock = true;
+        disableWhileTyping = false;
+        middleEmulation = true;
+        scrollMethod = "twofinger";
+      };
+    };
+
+  # Lid Switch suspend with logind
+  services.logind.lidSwitch = "suspend";
     # Audio (pipewire)
       services.pipewire = {
         enable = true;
@@ -111,7 +166,6 @@
       xdotool
       xclip
       via
-      light
       alsa-utils
 
   # Networking
