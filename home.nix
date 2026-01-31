@@ -83,7 +83,8 @@
     dracula-theme           # GTK theme
     dracula-icon-theme      # Icon theme
     bibata-cursors
-
+    gnome-themes-extra      # Other GNOME themes
+    adwaita-icon-theme
   ];
 
   # XDG Defaults
@@ -110,6 +111,8 @@
       OPENER = "rifle";
       XDG_CURRENT_DESKTOP = "gtk"; # Tells Electron/GTK to use the GTK file chooser portal
       GTK_USE_PORTAL = "1";
+      XCURSOR_THEME = "Bibata-Modern-Ice"; # Cursor theme
+      XCURSOR_SIZE = "20"; # Cursor size
     };
 
     # 2. Global Paths (Replaces export PATH=...)
@@ -209,6 +212,46 @@
 
     ############ THEMES
 
+  # Xresources
+  xresources.properties = {
+      # --- Special ---
+      "*.foreground" = "#e6e1dc";
+      "*.background" = "#2b2b2b";
+      "*.cursorColor" = "#e6e1dc";
+
+      # --- Colors (Black) ---
+      "*.color0" = "#2b2b2b";
+      "*.color8" = "#5a647e";
+
+      # --- Colors (Red) ---
+      "*.color1" = "#da4939";
+      "*.color9" = "#da4939";
+
+      # --- Colors (Green) ---
+      "*.color2" = "#a5c261";
+      "*.color10" = "#a5c261";
+
+      # --- Colors (Yellow) ---
+      "*.color3" = "#ffc66d";
+      "*.color11" = "#ffc66d";
+
+      # --- Colors (Blue) ---
+      "*.color4" = "#6d9cbe";
+      "*.color12" = "#6d9cbe";
+
+      # --- Colors (Magenta) ---
+      "*.color5" = "#b6b3eb";
+      "*.color13" = "#b6b3eb";
+
+      # --- Colors (Cyan) ---
+      "*.color6" = "#519f50";
+      "*.color14" = "#519f50";
+
+      # --- Colors (White) ---
+      "*.color7" = "#e6e1dc";
+      "*.color15" = "#f9f7f3";
+      
+    };
 
     # 2. Configure GTK Declaratively
     gtk = {
@@ -234,10 +277,11 @@
       # This writes to ~/.config/gtk-2.0/gtkrc instead of cluttering ~ with .gtkrc-2.0
     };
 
-    # 4. Mouse Cursor (Applies to X11 root window and GTK)
+    # 4. Mouse Cursor
     home.file.".icons/default".source = "${pkgs.bibata-cursors}/share/icons/Bibata-Modern-Ice"; # link cursor icons to home
     home.pointerCursor = {
-      gtk.enable = true;
+      gtk.enable = true;      # Enable on GTK
+      x11.enable = true;      # To fix cursor switching on x11 native
       name = "Bibata-Modern-Ice";               # Replace with your cursor name
       package = pkgs.bibata-cursors;
       size = 20;
