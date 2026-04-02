@@ -116,7 +116,7 @@
     };
 
   # Lid Switch suspend with logind
-  services.logind.lidSwitch = "suspend";
+  services.logind.settings.Login.HandleLidSwitch = "suspend";
     # Audio (pipewire)
       services.pipewire = {
         enable = true;
@@ -132,10 +132,28 @@
   systemd.packages = [ pkgs.cloudflare-warp ];
   systemd.services.warp-svc.wantedBy = [ "multi-user.target" ];
 
+  # Ollama 
+  services.ollama = {
+    enable = true;
+    
+    # Use the rocm-specific package from the flake directly
+    package = inputs.ollama-flake.packages.${pkgs.system}.rocm;
+    #package = pkgs.ollama-rocm;
+
+    environmentVariables = {
+      HSA_OVERRIDE_GFX_VERSION = "11.0.2"; 
+      OLLAMA_INTEL_GPU = "0"; 
+      OLLAMA_KEEP_ALIVE = "1h"; 
+      # This helps Ollama's internal discovery know to use the ROCm path
+      OLLAMA_LLM_LIBRARY = "rocm";
+    };
+  };
+
   # Allow Unfree Software
   nixpkgs.config.allowUnfree = true;
   nixpkgs.config.permittedInsecurePackages = [
-    "pulsar-1.129.0"  # permit Pulsar editor
+    "pulsar-1.131.1"  # permit Pulsar editor
+    "pulsar-1.131.3"  # permit Pulsar editor
   ];
 
   # Package opts
@@ -167,6 +185,7 @@
       xclip
       via
       alsa-utils
+      openconnect
 
   # Networking
   cloudflare-warp
@@ -322,7 +341,6 @@ programs.nix-ld.libraries = with pkgs; [
 
   # Other nix settings
   nix.settings.experimental-features = ["nix-command" "flakes"];
-
 
   # Leave at the release version of first install (25.11)
   # Before changing this value read the documentation for this option

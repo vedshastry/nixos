@@ -80,6 +80,13 @@
 	fileSystems."/mnt/d" = {
 	  device = "/dev/disk/by-uuid/26C43682C43653F1";
 	  fsType = "ntfs3";
+    options = [ 
+        "rw"
+        "uid=1000"
+        "gid=100"
+        "umask=000" 
+        "nofail" 
+      ];
 	};
 
 

@@ -14,9 +14,15 @@
     # Zen Browser Flake
     zen-browser.url = "github:0xc000022070/zen-browser-flake";
 
+    # Opencode
+    opencode-flake.url = "github:aodhanhayter/opencode-flake";
+
     # Pulsar editor
     #pulsar-flake.url = "github:pulsar-edit/pulsar/v1.130.1";
-    
+
+    # Ollama
+    ollama-flake.url = "github:abysssol/ollama-flake";
+
     # Suckless tools
     # these are standard C repos and not flakes, so flake = false
     my-dwm = {

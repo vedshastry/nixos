@@ -8,7 +8,8 @@
   home.packages = with pkgs; [
     # Core Tools
     zsh # Shell
-    ripgrep fd unzip jq tree
+    ripgrep fd 
+    unzip jq tree p7zip unrar atool
     ranger
     lf
 
@@ -17,6 +18,7 @@
     nitrogen
     dunst
     flameshot
+    ksnip
     numlockx
 
     # x11 utils
@@ -70,13 +72,15 @@
     zathura
     xarchiver
     sxiv
+    mpv
     libnotify
 
   # AI
     gemini-cli-bin
     geminicommit
-    claude-code
-    claude-monitor
+    #claude-code
+    #claude-monitor
+    #aider-chat
 
   # Themes
     gnome-tweaks
@@ -88,12 +92,16 @@
   ];
 
   # XDG Defaults
-      xdg.mimeApps = {
-        enable = true;
-        defaultApplications = {
-          "inode/directory" = [ "thunar.desktop" ];
-        };
-      };
+  xdg.mimeApps = {
+    enable = true;
+    defaultApplications = {
+      "text/html" = [ "zen.desktop" ];
+      "x-scheme-handler/http" = [ "zen.desktop" ];
+      "x-scheme-handler/https" = [ "zen.desktop" ];
+      "x-scheme-handler/about" = [ "zen.desktop" ];
+      "x-scheme-handler/unknown" = [ "zen.desktop" ];
+    };
+  };
 
   # Git Config
   programs.git = {
@@ -141,9 +149,12 @@
         v = "nvim";
         vp = "nvim -p";
         sv = "sudo nvim";
+        smp = "stata-mp";
+        xmp = "xstata-mp";
 
         # NixOS specifics (replacing your 'p=sudo pacman')
         update = "sudo nixos-rebuild switch --flake ~/repos/nixos#thinkpad";
+        sysup = "nix flake update --flake ~/repos/nixos && sudo nixos-rebuild switch --flake ~/repos/nixos#thinkpad";
 
         # Workflow
         lad = "ls -d .*(/)"; # Only dot-directories
