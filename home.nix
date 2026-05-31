@@ -23,9 +23,9 @@
 
     # x11 utils
     xdg-utils
-    xorg.xset
-    xorg.setxkbmap
-    xorg.xsetroot
+    xset
+    setxkbmap
+    xsetroot
 
     # Tray apps
     networkmanagerapplet
@@ -63,9 +63,12 @@
     slack
     touchegg
     emacs
+    electrum
+    monero-gui
     obsidian
     obs-studio
     tor
+    tor-browser
     libreoffice
     thunar
     autorandr
@@ -95,11 +98,14 @@
   xdg.mimeApps = {
     enable = true;
     defaultApplications = {
-      "text/html" = [ "zen.desktop" ];
-      "x-scheme-handler/http" = [ "zen.desktop" ];
-      "x-scheme-handler/https" = [ "zen.desktop" ];
-      "x-scheme-handler/about" = [ "zen.desktop" ];
-      "x-scheme-handler/unknown" = [ "zen.desktop" ];
+      "text/plain" = "nvim.desktop";
+      "text/x-lua" = "nvim.desktop";
+      "application/x-lua" = "nvim.desktop";
+      "text/html" = "zen.desktop";
+      "x-scheme-handler/http" = "zen.desktop";
+      "x-scheme-handler/https" = "zen.desktop";
+      "x-scheme-handler/about" = "zen.desktop";
+      "x-scheme-handler/unknown" = "zen.desktop";
     };
   };
 
@@ -297,6 +303,9 @@
       package = pkgs.bibata-cursors;
       size = 20;
     };
+
+    # GTK Theme
+    gtk.gtk4.theme = config.gtk.theme; # Or null to adopt new behavior
 
     # QT -> GTK
     qt = {

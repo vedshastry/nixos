@@ -137,8 +137,8 @@
     enable = true;
     
     # Use the rocm-specific package from the flake directly
-    package = inputs.ollama-flake.packages.${pkgs.system}.rocm;
-    #package = pkgs.ollama-rocm;
+    #package = inputs.ollama-flake.packages.${pkgs.system}.rocm;
+    package = pkgs.ollama-rocm;
 
     environmentVariables = {
       HSA_OVERRIDE_GFX_VERSION = "11.0.2"; 
@@ -152,8 +152,7 @@
   # Allow Unfree Software
   nixpkgs.config.allowUnfree = true;
   nixpkgs.config.permittedInsecurePackages = [
-    "pulsar-1.131.1"  # permit Pulsar editor
-    "pulsar-1.131.3"  # permit Pulsar editor
+    "pulsar-1.132.1"  # permit Pulsar editor
   ];
 
   # Package opts
@@ -162,8 +161,8 @@
   # System Packages
   environment.systemPackages = with pkgs; [
 
-    # Suckless tools
-    xorg.libX11 xorg.libXft xorg.libXinerama # dependencies
+      # Suckless tools
+      libX11 libXft libXinerama # dependencies
       st
       dmenu
       dwm
@@ -221,16 +220,16 @@ programs.nix-ld.libraries = with pkgs; [
   glibc
   glib
   gcc.cc
-  xorg.libX11
-  xorg.libXcursor
-  xorg.libXrandr
-  xorg.libXinerama
-  xorg.libXi
-  xorg.libXrender
-  xorg.libXtst
-  xorg.libxcb
-  xorg.libSM
-  xorg.libICE
+  libx11
+  libxcursor
+  libxrandr
+  libxinerama
+  libxi
+  libxrender
+  libxtst
+  libxcb
+  libsm
+  libice
   libxcrypt
   libuuid
   ncurses5
@@ -257,7 +256,7 @@ programs.nix-ld.libraries = with pkgs; [
       dwm = prev.dwm.overrideAttrs (old: {
         src = inputs.my-dwm;
         nativeBuildInputs = (old.nativeBuildInputs or []) ++ [ prev.git prev.pkg-config ];
-        buildInputs = (old.buildInputs or []) ++ [ prev.xorg.libxcb prev.xorg.xcbutil prev.xorg.xcbutilwm ];
+        buildInputs = (old.buildInputs or []) ++ [ prev.libxcb prev.libxcb-util prev.libxcb-wm ];
 
         # Clean old binaries
         preBuild = ''
