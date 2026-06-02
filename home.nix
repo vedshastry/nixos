@@ -95,12 +95,19 @@
   ];
 
   # XDG Defaults
+# XDG Defaults
   xdg.mimeApps = {
     enable = true;
     defaultApplications = {
       "text/plain" = "nvim.desktop";
       "text/x-lua" = "nvim.desktop";
       "application/x-lua" = "nvim.desktop";
+      
+      # Catch-alls for "random/unknown" files:
+      "application/octet-stream" = "nvim.desktop"; # Unrecognized/binary files
+      "application/x-zerosize" = "nvim.desktop";   # Completely empty files
+
+      # Browser
       "text/html" = "zen-beta.desktop";
       "x-scheme-handler/http" = "zen-beta.desktop";
       "x-scheme-handler/https" = "zen-beta.desktop";

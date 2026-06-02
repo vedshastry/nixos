@@ -77,11 +77,11 @@
     "my-slstatus": {
       "flake": false,
       "locked": {
-        "lastModified": 1780426869,
-        "narHash": "sha256-hPQbc1/J1WvhqUVKvd6iecEK9i53noKtvv9Wj3/n/ZE=",
+        "lastModified": 1780429380,
+        "narHash": "sha256-vzXo6bluSrQY/nL0brmV+g1S2nB9/eN223NeZvzbfJ4=",
         "owner": "vedshastry",
         "repo": "slstatus",
-        "rev": "285d2227e410eff4e82a3ff685f5a4171fe379a0",
+        "rev": "9f8bfa1177da58678e22ec6fe597e7690f0b20f0",
         "type": "github"
       },
       "original": {
