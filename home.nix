@@ -120,7 +120,7 @@
     home.sessionVariables = {
       EDITOR = "nvim";
       VISUAL = "nvim";
-      BROWSER = "zen";
+      BROWSER = "zen-beta";
       PDFVIEWER = "zathura";
       OPENER = "rifle";
       XDG_CURRENT_DESKTOP = "gtk"; # Tells Electron/GTK to use the GTK file chooser portal
