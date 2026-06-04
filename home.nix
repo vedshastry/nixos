@@ -69,7 +69,7 @@
     obs-studio
     tor
     tor-browser
-    libreoffice
+    libreoffice-fresh
     thunar
     autorandr
     zathura
@@ -81,6 +81,7 @@
   # AI
     gemini-cli-bin
     geminicommit
+    llama-cpp
     #claude-code
     #claude-monitor
     #aider-chat
