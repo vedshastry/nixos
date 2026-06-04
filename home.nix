@@ -82,6 +82,7 @@
     gemini-cli-bin
     geminicommit
     llama-cpp
+    goose-cli
     #claude-code
     #claude-monitor
     #aider-chat
