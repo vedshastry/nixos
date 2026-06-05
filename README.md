@@ -1,56 +1,91 @@
-# NixOS Config
+# NixOS config
 
-This repository contains a declarative **NixOS** configuration for a **Lenovo ThinkPad T14 Gen 5 (AMD)**. It features a fully reproducible system state, a custom **suckless** desktop environment, and seamless integration with an existing **Arch Linux** dual-boot installation.
+A declarative NixOS configuration for a Lenovo ThinkPad T14 Gen 5 (AMD).
+It runs a suckless desktop (dwm, st, slstatus, dmenu) under X, built from
+personal forks, and lives alongside Windows and Arch Linux in a triple-boot
+setup.
 
-## 🚀 Key Features
+## The setup
 
-### System
-- Uses nix flakes for suckless tools
-- Linux kernel (`pkgs.linuxPackages_latest`)
-- **GRUB** replacing `systemd-boot` to manage dual-booting.
-- Dualboots with Windows 11
-- Mount LUKS encrypted btrfs partition at boot
+This machine triple-boots from a single disk:
 
-- **Suckless tools**: lightweight workflow with vim bindings:
-  - **DWM**: Tiling window manager.
-  - **St**: Simple terminal (patched with scrollback, alpha, etc.).
-  - **Dmenu**: Application launcher.
-  - **Slstatus**: Status bar.
-  - *Note: These are fetched directly from personal GitHub repositories during the build.*
-- **Theming**:
-  - **Dracula Theme**: Consistent dark theme across GTK, Icons, and QT applications.
-  - **Volantes Cursors**: Modern cursor theme.
-  - **Fonts**: JetBrains Mono Nerd Font (Coding) and Noto Sans (UI).
+- **Windows 11** — the primary OEM install, kept on its own partition.
+- **Arch Linux** — a LUKS-encrypted btrfs partition. This is the daily driver
+  and the source of truth for personal files.
+- **NixOS** — this configuration. Rather than duplicating data, NixOS unlocks
+  and mounts the Arch partition at `/mnt/arch`, then symlinks shared folders
+  (`repos`, `Dropbox`, configs) into the NixOS home. Both systems read and
+  write the same files.
 
-## Repository Structure
+GRUB replaces `systemd-boot` as the bootloader. It runs `os-prober` to pick up
+Windows, carries an explicit menu entry for the encrypted Arch install, and
+unlocks the LUKS volume at boot so the shared partition is available.
+
+## Desktop
+
+A minimal X session started with `startx` — no display manager. The window
+manager and tools are suckless builds pulled from personal GitHub forks and
+compiled by Nix via an overlay:
+
+| Tool | Role | Source |
+| :--- | :--- | :--- |
+| dwm | tiling window manager | `github:vedshastry/dwm` |
+| st | terminal | `github:vedshastry/st` |
+| dmenu | application launcher | `github:vedshastry/dmenu` |
+| slstatus | status bar | `github:vedshastry/slstatus` |
+
+These are plain C repositories (`flake = false`); the overlay in
+`configuration.nix` overrides each upstream package's `src` to point at the
+fork and rebuilds it. Bindings live in each fork's `config.def.h`.
+
+Theming is Dracula across GTK and Qt, Bibata cursors, with JetBrains Mono and
+Noto fonts.
+
+## Hardware & services
+
+- Latest mainline kernel, AMD microcode, `fwupd` for firmware updates.
+- TLP with ThinkPad battery charge thresholds and AMD P-State power profiles.
+- PipeWire (ALSA/PulseAudio/JACK), Bluetooth, `libinput` touchpad, printing.
+- Cloudflare WARP, Ollama on ROCm (AMD GPU), QMK/VIA keyboard access.
+- Suspend on lid close.
+
+## Repository layout
 
 | File | Description |
 | :--- | :--- |
-| `flake.nix` | **Entry Point**. Defines inputs (Nixpkgs, Home Manager, Zen Browser) and system outputs. |
-| `configuration.nix` | **System Config**. Networking, audio (Pipewire), Xorg, system-wide packages, and user accounts. |
-| `hardware-configuration.nix` | **Hardware & Boot**. GRUB config, LUKS encryption setup, and filesystem mounts (including Arch partitions). |
-| `home.nix` | **User Config**. Home Manager settings: shell aliases, theme settings, and user-specific packages. |
+| `flake.nix` | Entry point. Inputs (nixpkgs, home-manager, nixos-hardware, suckless forks, Zen browser) and the `thinkpad` system output. |
+| `configuration.nix` | System config: networking, audio, Xorg, power, services, packages, and the suckless overlay. |
+| `hardware-configuration.nix` | Boot and storage: GRUB, LUKS unlock, btrfs subvolume mounts, the Arch partition mount. |
+| `home.nix` | Home Manager: user packages, zsh, theming, Git, XDG defaults. |
+| `symlink/symlink.sh` | First-run script that links shared folders from the mounted Arch home into the NixOS home. |
 
-## Installation & Usage
+## Usage
 
-1. **Clone the repository:**
-   ```bash
-   git clone https://github.com/vedshastry/nixos.git ~/repos/nixos
-   cd ~/repos/nixos
-   ```
+Rebuild and switch:
 
-2. **Apply the configuration:**
-   ```bash
-   # Rebuilds the system and switches to the new generation
-   sudo nixos-rebuild switch --flake .#hostname
-   ```
+```bash
+sudo nixos-rebuild switch --flake ~/repos/nixos#thinkpad
+```
 
-3. **Post-Install (First Run):**
-   Run the symlink script to connect shared folders from the Arch partition:
-   ```bash
-   ./symlink/symlink.sh
-   ```
+Update inputs, then rebuild:
 
-## ⚠️ Notes
-- The `hardware-configuration.nix` includes specific UUIDs for the encrypted LUKS partitions. **Do not use this directly on another machine** without updating these identifiers.
-- The `symlink.sh` script assumes the Arch partition is mounted at `/mnt/arch`.
+```bash
+nix flake update --flake ~/repos/nixos
+sudo nixos-rebuild switch --flake ~/repos/nixos#thinkpad
+```
+
+These are aliased to `update` and `sysup` in the shell.
+
+First run only — link the shared Arch folders:
+
+```bash
+./symlink/symlink.sh
+```
+
+## Notes
+
+`hardware-configuration.nix` hard-codes the LUKS UUID and the partition layout
+of this specific machine. It is not portable as-is — the encrypted device UUID,
+filesystem UUIDs, and the `/mnt/arch` mount all need updating for any other
+setup. The symlink script assumes the Arch root is mounted at `/mnt/arch` with
+its home at `/mnt/arch/home`.

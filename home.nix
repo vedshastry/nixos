@@ -189,8 +189,15 @@
         BROWSER = "zen-beta";
         PDFVIEWER = "zathura";
         OPENER = "rifle";
+
         # Point Stata to wherever you decide to install it (likely via nix-ld or Flatpak)
         # PATH is handled specially, see initExtra below for complex path additions
+
+        # AI Agents
+        # llama-server doesn't care, but the goose client needs an OPENAI string
+        OPENAI_BASE_URL="http://127.0.0.1:8080/v1";
+        OPENAI_API_KEY="sk-local";
+        GOOSE_MODEL="gemma-4";
       };
 
       # 3. MIGRATE COMPLEX LOGIC (.zshrc + .zprofile)
