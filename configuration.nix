@@ -37,7 +37,7 @@
   hardware.keyboard.qmk.enable = true;
   # If the standard QMK rule doesn't catch the NuPhy V2
   services.udev.extraRules = ''
-    KERNEL=="hidraw*", SUBSYSTEM=="hidraw", ATTRS{idVendor}=="19f5", MODE="0660", GROUP="users", TAG+="uaccess", TAG+="udev-acl"
+    KERNEL=="hidraw*", SUBSYSTEM=="hidraw", ATTRS{idVendor}=="19f5", ATTRS{idProduct}=="32f5", MODE="0660", GROUP="users", TAG+="uaccess", TAG+="udev-acl"
   '';
 
   # Enable Bluetooth
@@ -46,6 +46,9 @@
   services.blueman.enable = true; # Enables the Blueman service, Polkit rules, and D-Bus integration
 
   # Services
+  services.mullvad-vpn.enable = true; # Mullvad
+  services.mullvad-vpn.package = pkgs.mullvad-vpn; # Mullvad GUI
+  services.resolved.enable = true;  # Resolve DNS systemd
 
 # Power Management (TLP)
   services.power-profiles-daemon.enable = false; # Conflict with TLP

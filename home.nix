@@ -40,7 +40,7 @@
 
 
     # Research / Dev
-    textlive.combined.scheme-full
+    texlive.combined.scheme-full
     texlab # language server for neovim
     pulsar # inputs.pulsar-flake.packages.${pkgs.system}.default
     neovim
@@ -193,7 +193,7 @@
     };
 
     # 3. MIGRATE COMPLEX LOGIC (.zshrc + .zprofile)
-    initExtra = ''
+    initContent = ''
       # --- Custom Prompt (Ported from your config) ---
       PROMPT='%F{white}%n%f@%F{green}%m%f %F{blue}%B%~%b%f %# '
       RPROMPT='[%F{yellow}%?%f]'
