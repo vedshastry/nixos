@@ -17,29 +17,28 @@
     # Opencode
     opencode-flake.url = "github:aodhanhayter/opencode-flake";
 
-    # Pulsar editor
-    #pulsar-flake.url = "github:pulsar-edit/pulsar/v1.130.1";
-
     # Ollama
     ollama-flake.url = "github:abysssol/ollama-flake";
 
+    # Claude Code Flake
+    claude-code-nix.url = "github:sadjow/claude-code-nix";
+
     # Suckless tools
-    # these are standard C repos and not flakes, so flake = false
     my-dwm = {
-    url = "github:vedshastry/dwm";
-    flake = false;
+      url = "github:vedshastry/dwm";
+      flake = false;
     };
     my-st = {
-    url = "github:vedshastry/st";
-    flake = false;
+      url = "github:vedshastry/st";
+      flake = false;
     };
     my-dmenu = {
-    url = "github:vedshastry/dmenu";
-    flake = false;
+      url = "github:vedshastry/dmenu";
+      flake = false;
     };
     my-slstatus = {
-    url = "github:vedshastry/slstatus";
-    flake = false;
+      url = "github:vedshastry/slstatus";
+      flake = false;
     };
   };
 
@@ -48,16 +47,14 @@
       specialArgs = { inherit inputs; };
       modules = [
         ./configuration.nix
-        nixos-hardware.nixosModules.lenovo-thinkpad-t14-amd-gen5 # Gen 5 profile might not be explicit yet, Gen 4 is very close for HawkPoint
+        nixos-hardware.nixosModules.lenovo-thinkpad-t14-amd-gen5 
         home-manager.nixosModules.home-manager
         {
           home-manager.useGlobalPkgs = true;
           home-manager.useUserPackages = true;
-
-        # Backup file extension
           home-manager.backupFileExtension = "bak";
 
-          # This passes 'inputs' to home.nix, fixing the "missing attribute" error
+          # Pass 'inputs' to home.nix so it can access claude-code-nix
           home-manager.extraSpecialArgs = { inherit inputs; };
 
           home-manager.users.ved = import ./home.nix;

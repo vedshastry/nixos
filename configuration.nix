@@ -171,6 +171,7 @@
       # Tools
       git
       arandr
+      srandrd
       stow
       wget
       vim
@@ -340,6 +341,12 @@ programs.nix-ld.libraries = with pkgs; [
 
   # Other nix settings
   nix.settings.experimental-features = ["nix-command" "flakes"];
+
+# Allow pulling cached pre-built binaries for Claude Code
+  nix.settings = {
+    substituters = [ "https://claude-code.cachix.org" ];
+    trusted-public-keys = [ "claude-code.cachix.org-1:YeXf2aNu7UTX8Vwrze0za1WEDS+4DuI2kVeWEE4fsRk=" ];
+  };
 
   # Leave at the release version of first install (25.11)
   # Before changing this value read the documentation for this option
