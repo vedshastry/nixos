@@ -119,17 +119,24 @@
     };
 
   # Lid Switch suspend with logind
-  services.logind.settings.Login.HandleLidSwitch = "suspend";
-    # Audio (pipewire)
-      services.pipewire = {
-        enable = true;
-        audio.enable = true;
-        alsa.enable = true;
-        alsa.support32Bit = true; # ALSA Legacy
-        pulse.enable = true; # Pipewire - pulse
-        jack.enable = true;
-        wireplumber.enable = true;
-      };
+  #services.logind.settings.Login.HandleLidSwitch = "suspend";
+  # Power Management & Lid Switch Behavior
+  services.logind = {
+    lidSwitch = "suspend";             # Mode 1: On battery, close lid -> sleep
+    lidSwitchExternalPower = "suspend";# Mode 1: Plugged into a regular wall charger, close lid -> sleep
+    lidSwitchDocked = "ignore";        # Mode 2: External monitor connected, close lid -> do nothing (stay awake)
+  };
+
+  # Audio (pipewire)
+  services.pipewire = {
+    enable = true;
+    audio.enable = true;
+    alsa.enable = true;
+    alsa.support32Bit = true; # ALSA Legacy
+    pulse.enable = true; # Pipewire - pulse
+    jack.enable = true;
+    wireplumber.enable = true;
+  };
 
   # Cloudflare WARP (Systemd Service)
   systemd.packages = [ pkgs.cloudflare-warp ];
