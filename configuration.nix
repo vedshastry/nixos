@@ -149,15 +149,23 @@
     handlers.powerEvent = {
       event = "ac_adapter.*";
       action = ''
-        # Give the Thunderbolt controller time to drop the power state
+        # Give the Thunderbolt controller 1 second to update sysfs states
         sleep 1
         
         AC_ONLINE=$(${pkgs.coreutils}/bin/cat /sys/class/power_supply/*/online 2>/dev/null | grep -c "1")
         LID_STATE=$(${pkgs.coreutils}/bin/cat /proc/acpi/button/lid/*/state | ${pkgs.gawk}/bin/awk '{print $2}')
         
-        # If the dock was yanked (no power) AND the lid is currently closed, suspend.
-        if [ "$LID_STATE" = "closed" ] && [ "$AC_ONLINE" -eq 0 ]; then
+        if [ "$AC_ONLINE" -eq 0 ] && [ "$LID_STATE" = "closed" ]; then
+           # SEQUENCE 1: Dock Yanked + Lid Closed -> Go to sleep
            ${pkgs.systemd}/bin/systemctl suspend
+           
+        elif [ "$AC_ONLINE" -eq 1 ]; then
+           # SEQUENCE 2: Dock Plugged In -> Setup Monitors
+           # We run this regardless of lid state. If the lid is closed, the BIOS wakes the laptop,
+           # and this command ensures the screens turn on and route correctly.
+           
+           # Use 'sudo -u ved' to run the script as your user
+           ${pkgs.sudo}/bin/sudo -u ved DISPLAY=:0 XAUTHORITY=/home/ved/.Xauthority /home/ved/scripts/xmonitors.sh
         fi
       '';
     };
