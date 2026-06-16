@@ -118,13 +118,30 @@
       };
     };
 
-  # Lid Switch suspend with logind
-  #services.logind.settings.Login.HandleLidSwitch = "suspend";
   # Power Management & Lid Switch Behavior
   services.logind = {
     lidSwitch = "suspend";             # Mode 1: On battery, close lid -> sleep
     lidSwitchExternalPower = "ignore";# Mode 1: Plugged into a regular wall charger, close lid -> do nothing
     lidSwitchDocked = "ignore";        # Mode 2: External monitor connected, close lid -> do nothing (stay awake)
+  };
+  services.acpid = {
+    enable = true;
+    handlers.dockDisconnect = {
+      # Listen for any AC adapter plug/unplug hardware event
+      event = "ac_adapter.*";
+      action = ''
+        # 1. Check if we are physically on battery power (0 = unplugged, 1 = plugged in)
+        AC_ONLINE=$(${pkgs.coreutils}/bin/cat /sys/class/power_supply/*/online 2>/dev/null | grep -c "1")
+        
+        # 2. Check the physical state of the lid
+        LID_STATE=$(${pkgs.coreutils}/bin/cat /proc/acpi/button/lid/*/state | ${pkgs.gawk}/bin/awk '{print $2}')
+        
+        # 3. If power is pulled AND the lid is shut, go to sleep instantly
+        if [ "$AC_ONLINE" -eq 0 ] && [ "$LID_STATE" = "closed" ]; then
+           ${pkgs.systemd}/bin/systemctl suspend
+        fi
+      '';
+    };
   };
 
   # Audio (pipewire)
@@ -199,10 +216,6 @@
 
   # Networking
   cloudflare-warp
-
-
-  # XFCE
-  xfce4-power-manager
 
   # GNOME
   gtk3
