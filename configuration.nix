@@ -124,47 +124,42 @@
     lidSwitchExternalPower = "ignore";# Mode 1: Plugged into a regular wall charger, close lid -> do nothing
     lidSwitchDocked = "ignore";        # Mode 2: External monitor connected, close lid -> do nothing (stay awake)
   };
-  # Consolidate logic into ACPI
+  # Handle docking with acpid
   services.acpid = {
     enable = true;
     
-    # Trigger 1: When the lid is opened or closed
+    # Trigger 1: Lid Events
     handlers.lidEvent = {
       event = "button/lid.*";
       action = ''
-        # Wait a fraction of a second for sysfs to settle
-        sleep 0.5
+        # Give Thunderbolt PD 4 seconds to register power upon waking
+        sleep 4
         
         AC_ONLINE=$(${pkgs.coreutils}/bin/cat /sys/class/power_supply/*/online 2>/dev/null | grep -c "1")
         LID_STATE=$(${pkgs.coreutils}/bin/cat /proc/acpi/button/lid/*/state | ${pkgs.gawk}/bin/awk '{print $2}')
         
-        # If lid is closed AND no power is connected, suspend.
         if [ "$LID_STATE" = "closed" ] && [ "$AC_ONLINE" -eq 0 ]; then
            ${pkgs.systemd}/bin/systemctl suspend
         fi
       '';
     };
 
-    # Trigger 2: When the dock cable is plugged or unplugged
+    # Trigger 2: Power Events
     handlers.powerEvent = {
       event = "ac_adapter.*";
       action = ''
-        # Give the Thunderbolt controller 1 second to update sysfs states
-        sleep 1
+        # Give Thunderbolt 4 seconds to enumerate the DRM displays
+        sleep 4
         
         AC_ONLINE=$(${pkgs.coreutils}/bin/cat /sys/class/power_supply/*/online 2>/dev/null | grep -c "1")
         LID_STATE=$(${pkgs.coreutils}/bin/cat /proc/acpi/button/lid/*/state | ${pkgs.gawk}/bin/awk '{print $2}')
         
-        if [ "$AC_ONLINE" -eq 0 ] && [ "$LID_STATE" = "closed" ]; then
-           # SEQUENCE 1: Dock Yanked + Lid Closed -> Go to sleep
+        if [ "$LID_STATE" = "closed" ] && [ "$AC_ONLINE" -eq 0 ]; then
            ${pkgs.systemd}/bin/systemctl suspend
            
-        elif [ "$AC_ONLINE" -eq 1 ]; then
-           # SEQUENCE 2: Dock Plugged In -> Setup Monitors
-           # We run this regardless of lid state. If the lid is closed, the BIOS wakes the laptop,
-           # and this command ensures the screens turn on and route correctly.
-           
-           # Use 'sudo -u ved' to run the script as your user
+        elif [ "$AC_ONLINE" -ge 1 ]; then
+           # Use '-ge 1' because sometimes multiple power endpoints register.
+           # Run the xmonitors script to wake the screens from DPMS.
            ${pkgs.sudo}/bin/sudo -u ved DISPLAY=:0 XAUTHORITY=/home/ved/.Xauthority /home/ved/scripts/xmonitors.sh
         fi
       '';
