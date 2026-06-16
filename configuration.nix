@@ -39,6 +39,8 @@
   services.udev.extraRules = ''
     KERNEL=="hidraw*", SUBSYSTEM=="hidraw", ATTRS{idVendor}=="19f5", ATTRS{idProduct}=="32f5", MODE="0660", GROUP="users", TAG+="uaccess", TAG+="udev-acl",
     ACTION=="change", SUBSYSTEM=="drm", RUN+="${pkgs.systemd}/bin/systemctl start --no-block monitor-hotplug.service"
+    ACTION=="change", SUBSYSTEM=="power_supply", ENV{POWER_SUPPLY_TYPE}=="Mains", RUN+="${pkgs.systemd}/bin/systemctl start --no-block power-suspend-guard.service"
+    ACTION=="change", SUBSYSTEM=="power_supply", ENV{POWER_SUPPLY_TYPE}=="USB", RUN+="${pkgs.systemd}/bin/systemctl start --no-block power-suspend-guard.service"
   '';
 
   # Enable Bluetooth
@@ -119,11 +121,22 @@
       };
     };
 
+  # Resume on dock/AC attach: this T14 Gen5 AMD only supports s2idle (no S3).
+  # The nixos-hardware lenovo-thinkpad-t14-amd-gen5 module sets
+  # acpi.ec_no_wakeup=1, which disables the embedded controller as a wake
+  # source -- but the EC is exactly what detects "power attached". Appending
+  # =0 overrides it (last value on the cmdline wins) so plugging the dock wakes
+  # the machine from s2idle. Trade-off: the EC may also raise spurious wakes;
+  # revert if the battery drains while bagged.
+  boot.kernelParams = [ "acpi.ec_no_wakeup=0" ];
+
   # Power Management & Lid Switch Behavior
-  services.logind = {
-    lidSwitch = "ignore";             # Mode 1: On battery, close lid -> sleep
-    lidSwitchExternalPower = "ignore";# Mode 1: Plugged into a regular wall charger, close lid -> do nothing
-    lidSwitchDocked = "ignore";        # Mode 2: External monitor connected, close lid -> do nothing (stay awake)
+  # logind's lid handling is fully disabled; acpid owns all suspend decisions
+  # (logind's DRM display-counting is buggy across Thunderbolt disconnects).
+  services.logind.settings.Login = {
+    HandleLidSwitch = "ignore";
+    HandleLidSwitchExternalPower = "ignore";
+    HandleLidSwitchDocked = "ignore";
   };
 
   # Monitor hotplugging
@@ -143,43 +156,93 @@
     };
   };
 
-  # Handle docking with acpid
+  # --- SUSPEND MANAGEMENT ---
+  #
+  # The machine suspends only via the power-suspend-guard service below.
+  # Display routing is owned entirely by udev -> monitor-hotplug.service; the
+  # suspend path never touches xrandr.
+  #
+  # Why not acpid for power? On this Type-C/Thunderbolt dock, yanking the cable
+  # does NOT emit a classic ACPI `ac_adapter` event (verified: acpid logs zero
+  # power events during a dock disconnect). Power is delivered through the UCSI
+  # USB-C controller, whose driver reliably fires a `power_supply` udev `change`
+  # event instead. So the suspend trigger lives on the power_supply subsystem.
+  #
+  # acpid is retained ONLY for the lid button, which does emit ACPI events.
   services.acpid = {
     enable = true;
-    
-    # Trigger 1: Lid Events
+
+    # Coffee-shop case: undocked, close lid -> suspend. The poll still rides out
+    # any momentary power flicker. `grep -qx 1` matches a line that is exactly
+    # "1", so values like "10" can never false-positive.
     handlers.lidEvent = {
       event = "button/lid.*";
       action = ''
-        sleep 4
-        
-        AC_ONLINE=$(${pkgs.coreutils}/bin/cat /sys/class/power_supply/*/online 2>/dev/null | grep -c "1")
         LID_STATE=$(${pkgs.coreutils}/bin/cat /proc/acpi/button/lid/*/state | ${pkgs.gawk}/bin/awk '{print $2}')
-        
-        if [ "$LID_STATE" = "closed" ] && [ "$AC_ONLINE" -eq 0 ]; then
-           ${pkgs.systemd}/bin/systemctl suspend
+        if [ "$LID_STATE" != "closed" ]; then
+           exit 0
         fi
-      '';
-    };
 
-    # Trigger 2: Power Events
-    handlers.powerEvent = {
-      event = "ac_adapter.*";
-      action = ''
-        sleep 4
-        
-        AC_ONLINE=$(${pkgs.coreutils}/bin/cat /sys/class/power_supply/*/online 2>/dev/null | grep -c "1")
-        LID_STATE=$(${pkgs.coreutils}/bin/cat /proc/acpi/button/lid/*/state | ${pkgs.gawk}/bin/awk '{print $2}')
-        
-        if [ "$LID_STATE" = "closed" ] && [ "$AC_ONLINE" -eq 0 ]; then
-           ${pkgs.systemd}/bin/systemctl suspend
-           
-        elif [ "$AC_ONLINE" -ge 1 ]; then
-           # Use 'env' to ensure X11 variables survive the sudo security policies
-           ${pkgs.sudo}/bin/sudo -u ved ${pkgs.coreutils}/bin/env DISPLAY=:0 XAUTHORITY=/home/ved/.Xauthority /home/ved/scripts/xmonitors.sh
-        fi
+        for _ in $(${pkgs.coreutils}/bin/seq 1 8); do
+           if ${pkgs.gnugrep}/bin/grep -qx 1 /sys/class/power_supply/*/online 2>/dev/null; then
+              exit 0
+           fi
+           ${pkgs.coreutils}/bin/sleep 1
+        done
+
+        ${pkgs.systemd}/bin/systemctl suspend
       '';
     };
+  };
+
+  # Suspend guard: fired by the power_supply udev rule on AC/USB-C power change.
+  # Polls up to 8s to ride out the 5-7s 0V drop during a Thunderbolt PD
+  # handshake. If power comes back -> docking/charging, stay awake. If power
+  # stays gone and the lid is shut -> the cable was yanked, suspend.
+  systemd.services.power-suspend-guard = {
+    description = "Suspend when external power is lost and lid is closed (Type-C aware)";
+    path = [ pkgs.coreutils pkgs.gnugrep pkgs.gawk pkgs.systemd ];
+    serviceConfig.Type = "oneshot";
+    # A single dock connect emits a STORM of power_supply changes (PD
+    # renegotiation), each starting this unit. The default limiter
+    # (5 starts / 10s) would then refuse the *next* real event — e.g. the
+    # unplug — with "start request repeated too quickly", so the machine would
+    # never suspend. Disable the limiter; the 8s poll + oneshot job coalescing
+    # already keep concurrency bounded.
+    unitConfig.StartLimitIntervalSec = "0";
+    script = ''
+      LOG=/tmp/power-suspend-guard.log
+
+      # Count supplies reporting exactly online=1, across the canonical AC
+      # (Mains) line plus every UCSI USB-C source (the dock's real path).
+      # `|| true` keeps grep's exit-1-on-zero-matches from failing the unit.
+      online_count() {
+        cat /sys/class/power_supply/AC/online \
+            /sys/class/power_supply/ucsi-source-psy-*/online 2>/dev/null \
+          | grep -cx 1 || true
+      }
+
+      echo "=== $(date) power_supply change (start online=$(online_count)) ===" >> "$LOG"
+
+      # Poll up to 8s to ride out the 5-7s 0V drop during a Thunderbolt PD
+      # handshake. If power ever shows up -> docking/charging, stay awake.
+      for _ in $(seq 1 8); do
+        N=$(online_count)
+        if [ "$N" -gt 0 ]; then
+          echo "power present (online sources=$N) -> stay awake" >> "$LOG"
+          exit 0
+        fi
+        sleep 1
+      done
+
+      LID_STATE=$(cat /proc/acpi/button/lid/*/state | awk '{print $2}')
+      echo "no power after 8s; lid=$LID_STATE" >> "$LOG"
+      if [ "$LID_STATE" = "closed" ]; then
+        echo "suspending" >> "$LOG"
+        systemctl suspend
+      fi
+      exit 0
+    '';
   };
 
   # Audio (pipewire)
