@@ -123,7 +123,7 @@
   # Power Management & Lid Switch Behavior
   services.logind = {
     lidSwitch = "suspend";             # Mode 1: On battery, close lid -> sleep
-    lidSwitchExternalPower = "suspend";# Mode 1: Plugged into a regular wall charger, close lid -> sleep
+    lidSwitchExternalPower = "ignore";# Mode 1: Plugged into a regular wall charger, close lid -> do nothing
     lidSwitchDocked = "ignore";        # Mode 2: External monitor connected, close lid -> do nothing (stay awake)
   };
 
