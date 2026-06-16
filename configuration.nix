@@ -37,7 +37,8 @@
   hardware.keyboard.qmk.enable = true;
   # If the standard QMK rule doesn't catch the NuPhy V2
   services.udev.extraRules = ''
-    KERNEL=="hidraw*", SUBSYSTEM=="hidraw", ATTRS{idVendor}=="19f5", ATTRS{idProduct}=="32f5", MODE="0660", GROUP="users", TAG+="uaccess", TAG+="udev-acl"
+    KERNEL=="hidraw*", SUBSYSTEM=="hidraw", ATTRS{idVendor}=="19f5", ATTRS{idProduct}=="32f5", MODE="0660", GROUP="users", TAG+="uaccess", TAG+="udev-acl",
+    ACTION=="change", SUBSYSTEM=="drm", RUN+="${pkgs.systemd}/bin/systemctl start --no-block monitor-hotplug.service"
   '';
 
   # Enable Bluetooth
@@ -124,6 +125,24 @@
     lidSwitchExternalPower = "ignore";# Mode 1: Plugged into a regular wall charger, close lid -> do nothing
     lidSwitchDocked = "ignore";        # Mode 2: External monitor connected, close lid -> do nothing (stay awake)
   };
+
+  # Monitor hotplugging
+  systemd.services.monitor-hotplug = {
+    description = "Trigger monitor hotplug";
+    # Ensure it only runs after the graphics stack is up
+    after = [ "display-manager.service" ];
+    serviceConfig = {
+      Type = "oneshot";
+      User = "ved";
+      Environment = [
+        "DISPLAY=:0"
+        "XAUTHORITY=/home/ved/.Xauthority"
+        "PATH=/run/current-system/sw/bin:/run/wrappers/bin:/bin"
+      ];
+      ExecStart = "/home/ved/scripts/xmonitors.sh";
+    };
+  };
+
   # Handle docking with acpid
   services.acpid = {
     enable = true;
@@ -132,7 +151,6 @@
     handlers.lidEvent = {
       event = "button/lid.*";
       action = ''
-        # Give Thunderbolt PD 4 seconds to register power upon waking
         sleep 4
         
         AC_ONLINE=$(${pkgs.coreutils}/bin/cat /sys/class/power_supply/*/online 2>/dev/null | grep -c "1")
@@ -148,7 +166,6 @@
     handlers.powerEvent = {
       event = "ac_adapter.*";
       action = ''
-        # Give Thunderbolt 4 seconds to enumerate the DRM displays
         sleep 4
         
         AC_ONLINE=$(${pkgs.coreutils}/bin/cat /sys/class/power_supply/*/online 2>/dev/null | grep -c "1")
@@ -158,9 +175,8 @@
            ${pkgs.systemd}/bin/systemctl suspend
            
         elif [ "$AC_ONLINE" -ge 1 ]; then
-           # Use '-ge 1' because sometimes multiple power endpoints register.
-           # Run the xmonitors script to wake the screens from DPMS.
-           ${pkgs.sudo}/bin/sudo -u ved DISPLAY=:0 XAUTHORITY=/home/ved/.Xauthority /home/ved/scripts/xmonitors.sh
+           # Use 'env' to ensure X11 variables survive the sudo security policies
+           ${pkgs.sudo}/bin/sudo -u ved ${pkgs.coreutils}/bin/env DISPLAY=:0 XAUTHORITY=/home/ved/.Xauthority /home/ved/scripts/xmonitors.sh
         fi
       '';
     };
@@ -325,7 +341,7 @@ programs.nix-ld.libraries = with pkgs; [
       st = prev.st.overrideAttrs (old: {
         src = inputs.my-st;
         nativeBuildInputs = (old.nativeBuildInputs or []) ++ [ prev.git prev.pkg-config ];
-	      buildInputs = (old.buildInputs or []) ++ [ prev.harfbuzz ];
+          buildInputs = (old.buildInputs or []) ++ [ prev.harfbuzz ];
 
         # Clean old binaries
         preBuild = ''
@@ -364,23 +380,23 @@ programs.nix-ld.libraries = with pkgs; [
 
   # Fonts
   fonts = {
-	  packages = with pkgs; [
-	    noto-fonts
-	    noto-fonts-cjk-sans
-	    noto-fonts-color-emoji
-	    font-awesome
-	    nerd-fonts.jetbrains-mono
-	    nerd-fonts.symbols-only
-	  ];
+      packages = with pkgs; [
+        noto-fonts
+        noto-fonts-cjk-sans
+        noto-fonts-color-emoji
+        font-awesome
+        nerd-fonts.jetbrains-mono
+        nerd-fonts.symbols-only
+      ];
 
-	  fontconfig = {
-	    enable = true;
-	    defaultFonts = {
-	      monospace = [ "NotoMono Nerd Font" ];
-	      serif = [ "Noto Serif" ];
-	      sansSerif = [ "Noto Sans" ];
-	    };
-	  };
+      fontconfig = {
+        enable = true;
+        defaultFonts = {
+          monospace = [ "NotoMono Nerd Font" ];
+          serif = [ "Noto Serif" ];
+          sansSerif = [ "Noto Sans" ];
+        };
+      };
   };
 
 
