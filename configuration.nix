@@ -120,24 +120,43 @@
 
   # Power Management & Lid Switch Behavior
   services.logind = {
-    lidSwitch = "suspend";             # Mode 1: On battery, close lid -> sleep
+    lidSwitch = "ignore";             # Mode 1: On battery, close lid -> sleep
     lidSwitchExternalPower = "ignore";# Mode 1: Plugged into a regular wall charger, close lid -> do nothing
     lidSwitchDocked = "ignore";        # Mode 2: External monitor connected, close lid -> do nothing (stay awake)
   };
+  # Consolidate logic into ACPI
   services.acpid = {
     enable = true;
-    handlers.dockDisconnect = {
-      # Listen for any AC adapter plug/unplug hardware event
-      event = "ac_adapter.*";
+    
+    # Trigger 1: When the lid is opened or closed
+    handlers.lidEvent = {
+      event = "button/lid.*";
       action = ''
-        # 1. Check if we are physically on battery power (0 = unplugged, 1 = plugged in)
-        AC_ONLINE=$(${pkgs.coreutils}/bin/cat /sys/class/power_supply/*/online 2>/dev/null | grep -c "1")
+        # Wait a fraction of a second for sysfs to settle
+        sleep 0.5
         
-        # 2. Check the physical state of the lid
+        AC_ONLINE=$(${pkgs.coreutils}/bin/cat /sys/class/power_supply/*/online 2>/dev/null | grep -c "1")
         LID_STATE=$(${pkgs.coreutils}/bin/cat /proc/acpi/button/lid/*/state | ${pkgs.gawk}/bin/awk '{print $2}')
         
-        # 3. If power is pulled AND the lid is shut, go to sleep instantly
-        if [ "$AC_ONLINE" -eq 0 ] && [ "$LID_STATE" = "closed" ]; then
+        # If lid is closed AND no power is connected, suspend.
+        if [ "$LID_STATE" = "closed" ] && [ "$AC_ONLINE" -eq 0 ]; then
+           ${pkgs.systemd}/bin/systemctl suspend
+        fi
+      '';
+    };
+
+    # Trigger 2: When the dock cable is plugged or unplugged
+    handlers.powerEvent = {
+      event = "ac_adapter.*";
+      action = ''
+        # Give the Thunderbolt controller time to drop the power state
+        sleep 1
+        
+        AC_ONLINE=$(${pkgs.coreutils}/bin/cat /sys/class/power_supply/*/online 2>/dev/null | grep -c "1")
+        LID_STATE=$(${pkgs.coreutils}/bin/cat /proc/acpi/button/lid/*/state | ${pkgs.gawk}/bin/awk '{print $2}')
+        
+        # If the dock was yanked (no power) AND the lid is currently closed, suspend.
+        if [ "$LID_STATE" = "closed" ] && [ "$AC_ONLINE" -eq 0 ]; then
            ${pkgs.systemd}/bin/systemctl suspend
         fi
       '';
