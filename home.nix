@@ -4,6 +4,13 @@ let
   # llama.cpp built with the Vulkan backend so the integrated Radeon 780M
   # (RADV PHOENIX) is actually used for inference instead of CPU-only BLAS.
   llama-cpp-vulkan = pkgs.llama-cpp.override { vulkanSupport = true; };
+
+  # Flameshot pinned to nixos-25.05 (12.1.0, Qt5). Unstable's 14.0.0 (Qt6)
+  # routes all captures through xdg-desktop-portal, which has no working
+  # Screenshot backend under bare dwm -> "portal timed out after 30 seconds".
+  # The 12.x build grabs X11 directly, so the tray icon + Print shortcut work.
+  flameshot-pinned =
+    inputs.nixpkgs-flameshot.legacyPackages.${pkgs.stdenv.hostPlatform.system}.flameshot;
 in
 {
   home.username = "ved";
@@ -22,7 +29,7 @@ in
     picom
     nitrogen
     dunst
-    flameshot
+    flameshot-pinned   # 12.1.0 (Qt5) pin; see let-binding above
     ksnip
     numlockx
 

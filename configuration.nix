@@ -152,11 +152,27 @@
   boot.kernelParams = [ "acpi.ec_no_wakeup=0" ];
 
   # Power Management & Lid Switch Behavior
-  # logind's lid handling is fully disabled; acpid owns all suspend decisions
-  # (logind's DRM display-counting is buggy across Thunderbolt disconnects).
+  #
+  # logind owns the lid-close decision again (it reads the PNP0C0D "Lid Switch"
+  # on event4 reliably; the acpid `button/lid` netlink path could not be
+  # confirmed firing after the kernel 7.1.3 bump, which is why lid-close
+  # silently stopped suspending on this generation).
+  #
+  # Clamshell behaviour, keyed on logind's three lid branches (evaluated in
+  # this precedence: Docked -> ExternalPower -> plain):
+  #   * Docked = external display connected -> IGNORE  (lid shut with monitors:
+  #       stay awake, keep the externals live; the internal panel is already
+  #       turned off by xmonitors.sh's dock layout).
+  #   * ExternalPower = charger only, no monitors      -> SUSPEND.
+  #   * plain = on battery, no monitors                -> SUSPEND.
+  #
+  # The one logind weakness -- stale DRM "docked" state across a Thunderbolt
+  # UNPLUG (it can keep thinking a monitor is attached and refuse to suspend) --
+  # is covered separately by power-suspend-guard below, which suspends off the
+  # power_supply event, independent of the display count.
   services.logind.settings.Login = {
-    HandleLidSwitch = "ignore";
-    HandleLidSwitchExternalPower = "ignore";
+    HandleLidSwitch = "suspend";
+    HandleLidSwitchExternalPower = "suspend";
     HandleLidSwitchDocked = "ignore";
   };
 
@@ -189,32 +205,12 @@
   # USB-C controller, whose driver reliably fires a `power_supply` udev `change`
   # event instead. So the suspend trigger lives on the power_supply subsystem.
   #
-  # acpid is retained ONLY for the lid button, which does emit ACPI events.
-  services.acpid = {
-    enable = true;
-
-    # Coffee-shop case: undocked, close lid -> suspend. The poll still rides out
-    # any momentary power flicker. `grep -qx 1` matches a line that is exactly
-    # "1", so values like "10" can never false-positive.
-    handlers.lidEvent = {
-      event = "button/lid.*";
-      action = ''
-        LID_STATE=$(${pkgs.coreutils}/bin/cat /proc/acpi/button/lid/*/state | ${pkgs.gawk}/bin/awk '{print $2}')
-        if [ "$LID_STATE" != "closed" ]; then
-           exit 0
-        fi
-
-        for _ in $(${pkgs.coreutils}/bin/seq 1 8); do
-           if ${pkgs.gnugrep}/bin/grep -qx 1 /sys/class/power_supply/*/online 2>/dev/null; then
-              exit 0
-           fi
-           ${pkgs.coreutils}/bin/sleep 1
-        done
-
-        ${pkgs.systemd}/bin/systemctl suspend
-      '';
-    };
-  };
+  # acpid's lid handler is retired: logind now owns lid-close suspend (see the
+  # logind block above). The old acpid `button/lid` handler could not be
+  # confirmed to fire after the kernel 7.1.3 bump and wrote no logs, so lid-close
+  # silently stopped suspending. acpid stays off; the unplug path lives in
+  # power-suspend-guard (udev power_supply), which never needed acpid.
+  services.acpid.enable = false;
 
   # Suspend guard: fired by the power_supply udev rule on AC/USB-C power change.
   # Polls up to 8s to ride out the 5-7s 0V drop during a Thunderbolt PD
