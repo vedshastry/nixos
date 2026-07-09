@@ -20,8 +20,14 @@
     # Ollama
     ollama-flake.url = "github:abysssol/ollama-flake";
 
-    # Claude Code Flake
+    # Claude Code
     claude-code-nix.url = "github:sadjow/claude-code-nix";
+
+    # Codex CLI
+    codex-cli-nix.url = "github:sadjow/codex-cli-nix";
+
+    # Antigravity 
+    antigravity-nix.url = "github:jacopone/antigravity-nix";
 
     # Suckless tools
     my-dwm = {

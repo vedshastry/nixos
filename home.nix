@@ -1,5 +1,10 @@
 { config, pkgs, inputs, ... }:
 
+let
+  # llama.cpp built with the Vulkan backend so the integrated Radeon 780M
+  # (RADV PHOENIX) is actually used for inference instead of CPU-only BLAS.
+  llama-cpp-vulkan = pkgs.llama-cpp.override { vulkanSupport = true; };
+in
 {
   home.username = "ved";
   home.homeDirectory = "/home/ved";
@@ -78,12 +83,15 @@
     mpv
     libnotify
 
-  # AI
+    # Agents
     gemini-cli-bin
     geminicommit
-    llama-cpp
+    llama-cpp-vulkan   # Vulkan-enabled llama.cpp (uses the 780M iGPU)
     goose-cli
-    inputs.claude-code-nix.packages."${pkgs.stdenv.hostPlatform.system}".claude-code
+    inputs.claude-code-nix.packages."${pkgs.stdenv.hostPlatform.system}".claude-code # Claude code flake
+    inputs.codex-cli-nix.packages."${pkgs.stdenv.hostPlatform.system}".default # Codex CLI flake
+    #inputs.antigravity-nix.packages."${pkgs.stdenv.hostPlatform.system}".antigravity # Antigravity flake
+    mcp-nixos # MCP for nixos
 
   # Themes
     gnome-tweaks
@@ -286,7 +294,8 @@
   # Mouse Cursor
   home.file.".icons/default".source = "${pkgs.bibata-cursors}/share/icons/Bibata-Modern-Ice"; 
   home.pointerCursor = {
-    gtk.enable = true;      
+    enable = true;
+    gtk.enable = true;
     x11.enable = true;      
     name = "Bibata-Modern-Ice";               
     package = pkgs.bibata-cursors;
@@ -298,7 +307,7 @@
   # QT -> GTK
   qt = {
     enable = true;
-    platformTheme.name = "gtk"; 
+    platformTheme.name = "gtk2";
     style.name = "gtk2";
   };
 
@@ -316,11 +325,16 @@
       After = [ "network.target" ];
     };
     Service = {
-      ExecStart = "${pkgs.llama-cpp}/bin/llama-server --models-dir %h/ai --port 8080 -c 32768 --models-max 1";
+      # Default to CPU (no -ngl): on the 780M, Vulkan offload gives ~no generation
+      # speedup (shared RAM bus) yet costs a 5+ min first-run shader compile.
+      # Benchmarked: OLMoE (1B active) hits ~34 tok/s gen / ~200 tok/s prompt on CPU.
+      # To experiment with GPU offload on a big dense model, add: -ngl 99
+      ExecStart = "${llama-cpp-vulkan}/bin/llama-server --models-dir %h/ai --port 8080 -c 32768 --models-max 1 --flash-attn on";
       Restart = "always";
       RestartSec = "10";
       Environment = [
-        "HSA_OVERRIDE_GFX_VERSION=11.0.2"
+        # Persist compiled Vulkan shaders, so any manual GPU run pays compile cost once.
+        "MESA_SHADER_CACHE_DIR=%h/.cache/mesa_shader_cache"
       ];
     };
     Install = {

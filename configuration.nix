@@ -8,9 +8,30 @@
   # Networking
   networking.hostName = "thinkpad";
   networking.networkmanager.enable = true; # Enable networkmanager
+  services.openssh.enable = true; # openSSH Daemon
+  services.openssh.settings.X11Forwarding = true; # Useful for later
+
+  # Tailscale: WireGuard mesh VPN. Gives this host a stable 100.x tailnet IP
+  # reachable from the iPad anywhere -- no port-forwarding, no Double-NAT.
+  # After `nixos-rebuild switch`, run `sudo tailscale up` once to authenticate.
+  # openFirewall (default true) opens UDP 41641 so peers can connect directly.
+  services.tailscale.enable = true;
+
+  # Trust the tailnet interface: SSH (22) and VNC (5900) are reachable over
+  # Tailscale without exposing either on the LAN / guest wifi.
+  networking.firewall.trustedInterfaces = [ "tailscale0" ];
+
+  # LAN-exposed ports: ssh only, for same-wifi admin. VNC (5900) is intentionally
+  # NOT opened here -- it is reachable only over the trusted tailnet interface.
+  networking.firewall.allowedTCPPorts = [ 22 ];
 
   # Time & Locale
-  time.timeZone = "America/Los_Angeles";
+  # Dynamic timezone: automatic-timezoned uses GeoClue2 (WiFi/IP geolocation)
+  # to set the system zone at runtime, so travelling updates the clock
+  # automatically. Note: time.timeZone must stay UNSET
+  services.automatic-timezoned.enable = true;
+  services.geoclue2.enable = true; # GeoClue needs a location source; enable the daemon and allow it to run.
+
   i18n.defaultLocale = "en_US.UTF-8";
   i18n.extraLocaleSettings = {
     LC_MONETARY = "en_US.UTF-8";
@@ -281,6 +302,8 @@
   nixpkgs.config.allowUnfree = true;
   nixpkgs.config.permittedInsecurePackages = [
     "pulsar-1.132.1"  # permit Pulsar editor
+    "librewolf-151.0.2-1"  # permit Librewolf (flagged insecure upstream)
+    "librewolf-unwrapped-151.0.2-1"  # its unwrapped dependency, flagged separately
   ];
 
   # Package opts
@@ -317,6 +340,7 @@
 
   # Networking
   cloudflare-warp
+  x11vnc # VNC server
 
   # GNOME
   gtk3
