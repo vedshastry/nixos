@@ -11,6 +11,16 @@ let
   # The 12.x build grabs X11 directly, so the tray icon + Print shortcut work.
   flameshot-pinned =
     inputs.nixpkgs-flameshot.legacyPackages.${pkgs.stdenv.hostPlatform.system}.flameshot;
+
+  # QGIS pinned to nixos-25.05 (reusing the stable pin above). On unstable,
+  # qgis pulls pdal, which fails to build against unstable's newer GDAL
+  # (GetMetadata() now returns CSLConstList) and needed a -fpermissive
+  # override -> a from-source rebuild of pdal AND qgis on every nixpkgs bump.
+  # The 25.05 stable channel predates that GDAL change, so pdal/qgis build
+  # cleanly there and come straight from cache.nixos.org -- no override, no
+  # local compilation. Revisit in a few months if a newer qgis is needed.
+  qgis-pinned =
+    inputs.nixpkgs-flameshot.legacyPackages.${pkgs.stdenv.hostPlatform.system}.qgis;
 in
 {
   home.username = "ved";
@@ -52,12 +62,12 @@ in
 
 
     # Research / Dev
-    texlive.combined.scheme-full
+    texliveFull
     texlab # language server for neovim
     pulsar # inputs.pulsar-flake.packages.${pkgs.system}.default
     neovim
     R
-    qgis
+    qgis-pinned   # nixos-25.05 pin; see let-binding above
     julia-bin
     # Python with default packages
     (python3.withPackages (ps: with ps; [
@@ -85,6 +95,7 @@ in
     thunar
     autorandr
     zathura
+    pandoc
     xarchiver
     sxiv
     mpv

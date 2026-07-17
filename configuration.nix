@@ -59,7 +59,7 @@
   # If the standard QMK rule doesn't catch the NuPhy V2
   services.udev.extraRules = ''
     KERNEL=="hidraw*", SUBSYSTEM=="hidraw", ATTRS{idVendor}=="19f5", ATTRS{idProduct}=="32f5", MODE="0660", GROUP="users", TAG+="uaccess", TAG+="udev-acl",
-    ACTION=="change", SUBSYSTEM=="drm", RUN+="${pkgs.systemd}/bin/systemctl start --no-block monitor-hotplug.service"
+    ACTION=="change", SUBSYSTEM=="drm", RUN+="${pkgs.systemd}/bin/systemctl restart --no-block monitor-hotplug.service"
     ACTION=="change", SUBSYSTEM=="power_supply", ENV{POWER_SUPPLY_TYPE}=="Mains", RUN+="${pkgs.systemd}/bin/systemctl start --no-block power-suspend-guard.service"
     ACTION=="change", SUBSYSTEM=="power_supply", ENV{POWER_SUPPLY_TYPE}=="USB", RUN+="${pkgs.systemd}/bin/systemctl start --no-block power-suspend-guard.service"
   '';
@@ -297,6 +297,7 @@
   # Allow Unfree Software
   nixpkgs.config.allowUnfree = true;
   nixpkgs.config.permittedInsecurePackages = [
+    "zoom-us"  # permit Zoom
     "pulsar-1.132.1"  # permit Pulsar editor
     "librewolf-151.0.2-1"  # permit Librewolf (flagged insecure upstream)
     "librewolf-unwrapped-151.0.2-1"  # its unwrapped dependency, flagged separately

@@ -4,10 +4,14 @@
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable"; # Rolling updates
 
-    # Pinned nixpkgs for flameshot only: unstable's flameshot 14 (Qt6) forces
-    # every capture through the xdg-desktop-portal Screenshot API, which hangs
-    # 30s on bare dwm (no portal Screenshot backend). 25.05 still ships the
-    # Qt5 12.1.0 build that grabs X11 directly. See home.nix.
+    # Shared stable (nixos-25.05) pin for a couple of packages that misbehave
+    # on unstable; consumed in home.nix.
+    #  - flameshot: unstable's 14 (Qt6) forces every capture through the
+    #    xdg-desktop-portal Screenshot API, which hangs 30s on bare dwm (no
+    #    portal backend). 25.05 ships the Qt5 12.1.0 build that grabs X11.
+    #  - qgis: unstable's pdal fails to build against the newer GDAL and needed
+    #    a -fpermissive override -> constant from-source rebuilds. 25.05 builds
+    #    both cleanly from cache.
     nixpkgs-flameshot.url = "github:nixos/nixpkgs/nixos-25.05";
 
     # Specific hardware tweaks for ThinkPad T14 Gen 5 (AMD)
