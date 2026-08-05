@@ -71,7 +71,7 @@
 
   # Services
   services.mullvad-vpn.enable = true; # Mullvad
-  services.mullvad-vpn.package = pkgs.mullvad-vpn; # Mullvad GUI
+  services.mullvad-vpn.gui.enable = true; # Mullvad GUI
   services.resolved.enable = true;  # Resolve DNS systemd
 
 # Power Management (TLP)

@@ -13,8 +13,13 @@ declarative where practical.
   `.#nixosConfigurations.thinkpad.config.system.build.toplevel`.
 - Never commit credentials, API keys, agent histories, session transcripts, or
   mutable files from `~/.claude` or `~/.codex`.
-- Codex user skills are stored in `codex/skills/` and exposed at
-  `~/.agents/skills` by Home Manager.
+- Shared agent config lives in `agents/`: `AGENTS.md` (global instructions),
+  `skills/`, and `memory/`. It is the single source of truth for both Claude
+  Code and Codex, symlinked in as `~/.claude/{CLAUDE.md,skills}`,
+  `~/.codex/{AGENTS.md,skills}`, and the Claude memory directory. Edit files
+  under `agents/` directly — never the symlinks. These are deliberately plain
+  symlinks rather than Home Manager `home.file` entries, so both agents can
+  still write skills and memories back.
 
 ## ThinkPad sleep and dock behavior
 

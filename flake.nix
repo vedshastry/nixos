@@ -56,6 +56,14 @@
       url = "github:vedshastry/slstatus";
       flake = false;
     };
+
+    # Dracula GTK theme, fetched directly: nixpkgs removed dracula-theme
+    # because it depended on gtk-engine-murrine (unmaintained GTK2 engine).
+    # We only need the GTK3/4 theme, built manually in home.nix.
+    dracula-gtk-theme = {
+      url = "github:dracula/gtk";
+      flake = false;
+    };
   };
 
   outputs = { self, nixpkgs, nixos-hardware, home-manager, ... }@inputs: {

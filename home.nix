@@ -21,6 +21,23 @@ let
   # local compilation. Revisit in a few months if a newer qgis is needed.
   qgis-pinned =
     inputs.nixpkgs-flameshot.legacyPackages.${pkgs.stdenv.hostPlatform.system}.qgis;
+
+  # dracula-theme was removed from nixpkgs because it depended on
+  # gtk-engine-murrine (unmaintained GTK2 engine). We only use the GTK3/4
+  # theme, so build it directly from the upstream flake input instead,
+  # skipping the GTK2 engine dependency entirely.
+  dracula-theme = pkgs.stdenvNoCC.mkDerivation {
+    pname = "dracula-theme";
+    version = "unstable-2026-07-31";
+    src = inputs.dracula-gtk-theme;
+    dontBuild = true;
+    installPhase = ''
+      runHook preInstall
+      mkdir -p $out/share/themes/Dracula
+      cp -a {assets,gnome-shell,gtk-3.0,gtk-3.20,gtk-4.0,index.theme,metacity-1,xfwm4} $out/share/themes/Dracula
+      runHook postInstall
+    '';
+  };
 in
 {
   home.username = "ved";
@@ -113,7 +130,6 @@ in
 
   # Themes
     gnome-tweaks
-    dracula-theme           # GTK theme
     dracula-icon-theme      # Icon theme
     bibata-cursors
     gnome-themes-extra      # Other GNOME themes
@@ -214,8 +230,10 @@ in
       OPENER = "rifle";
 
       # AI Agents
-      OPENAI_BASE_URL="http://127.0.0.1:8080/v1";
-      OPENAI_API_KEY="sk-local";
+      # NOTE: OPENAI_BASE_URL / OPENAI_API_KEY are deliberately NOT exported
+      # globally. Codex CLI honours them and would silently route a real
+      # ChatGPT session at the local llama.cpp server. Use the `local-ai`
+      # shell function below to scope them to a single command.
     };
 
     # 3. MIGRATE COMPLEX LOGIC (.zshrc + .zprofile)
@@ -226,6 +244,14 @@ in
 
       # --- Bindkeys ---
       bindkey -v
+
+      # --- Local llama.cpp inference (scoped, not global) ---
+      # Usage: local-ai <command ...>   e.g. `local-ai aichat "hi"`
+      local-ai() {
+        OPENAI_BASE_URL="http://127.0.0.1:8080/v1" \
+        OPENAI_API_KEY="sk-local" \
+        "$@"
+      }
 
       # --- Fix for GTK/Electron Apps in dwm ---
       export XDG_DATA_DIRS="${pkgs.gsettings-desktop-schemas}/share/gsettings-schemas/${pkgs.gsettings-desktop-schemas.name}:${pkgs.gtk3}/share/gsettings-schemas/${pkgs.gtk3.name}:$XDG_DATA_DIRS"
@@ -293,7 +319,7 @@ in
 
     theme = {
       name = "Dracula";             
-      package = pkgs.dracula-theme; 
+      package = dracula-theme;
     };
 
     iconTheme = {
