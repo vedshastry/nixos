@@ -13,13 +13,13 @@ declarative where practical.
   `.#nixosConfigurations.thinkpad.config.system.build.toplevel`.
 - Never commit credentials, API keys, agent histories, session transcripts, or
   mutable files from `~/.claude` or `~/.codex`.
-- Shared agent config lives in `agents/`: `AGENTS.md` (global instructions),
-  `skills/`, and `memory/`. It is the single source of truth for both Claude
-  Code and Codex, symlinked in as `~/.claude/{CLAUDE.md,skills}`,
-  `~/.codex/{AGENTS.md,skills}`, and the Claude memory directory. Edit files
-  under `agents/` directly — never the symlinks. These are deliberately plain
-  symlinks rather than Home Manager `home.file` entries, so both agents can
-  still write skills and memories back.
+- Shared agent config lives OUTSIDE this repo, at `~/agents/` (`AGENTS.md`,
+  `skills/`, `memory/`), plain-symlinked into `~/.claude/{CLAUDE.md,skills}`
+  and `~/.codex/{AGENTS.md,skills}`. It is deliberately not version-controlled
+  here: both agents write into it at runtime (Codex installs its own `.system`
+  skills there), so it is mutable state, not configuration. Never re-add an
+  `agents/` directory to this repo.
+- Durable memory is OptMem (`~/.optmem/memo`), also outside this repo.
 
 ## ThinkPad sleep and dock behavior
 
