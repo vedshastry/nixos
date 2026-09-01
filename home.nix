@@ -22,10 +22,32 @@ let
   qgis-pinned =
     inputs.nixpkgs-flameshot.legacyPackages.${pkgs.stdenv.hostPlatform.system}.qgis;
 
+  # CLIProxyAPI: local proxy that re-serves CLI OAuth logins (ChatGPT/Codex,
+  # Claude, Gemini) as OpenAI-/Anthropic-compatible HTTP APIs on :8317.
+  # Not in nixpkgs; packaged locally in ./pkgs.
+  cli-proxy-api = pkgs.callPackage ./pkgs/cli-proxy-api.nix { };
+
+  # - Fix GTK2 app theming
+    # gtk-engine-murrine was removed from nixpkgs (GTK2 purge), 
+    # but the gtk2 library still exists.
+    # Rebuild murrine from the last GNOME release and set GTK_PATH
+  gtk-engine-murrine = pkgs.stdenv.mkDerivation rec {
+    pname = "gtk-engine-murrine";
+    version = "0.98.2";
+    src = pkgs.fetchurl {
+      url = "mirror://gnome/sources/murrine/0.98/murrine-${version}.tar.xz";
+      sha256 = "129cs5bqw23i76h3nmc29c9mqkm9460iwc8vkl7hs4xr07h8mip9";
+    };
+    nativeBuildInputs = with pkgs; [ pkg-config intltool ];
+    buildInputs = [ pkgs.gtk2 ];
+    # GCC >= 14 makes implicit function declarations a hard error; murrine's
+    # 2012-era C relies on them (murrine_widget_is_ltr etc. lack prototypes).
+    env.NIX_CFLAGS_COMPILE = "-Wno-error=implicit-function-declaration";
+  };
+
   # dracula-theme was removed from nixpkgs because it depended on
-  # gtk-engine-murrine (unmaintained GTK2 engine). We only use the GTK3/4
-  # theme, so build it directly from the upstream flake input instead,
-  # skipping the GTK2 engine dependency entirely.
+  # gtk-engine-murrine (see above). Build it directly from the upstream
+  # flake input instead, including gtk-2.0 for xstata.
   dracula-theme = pkgs.stdenvNoCC.mkDerivation {
     pname = "dracula-theme";
     version = "unstable-2026-07-31";
@@ -34,7 +56,7 @@ let
     installPhase = ''
       runHook preInstall
       mkdir -p $out/share/themes/Dracula
-      cp -a {assets,gnome-shell,gtk-3.0,gtk-3.20,gtk-4.0,index.theme,metacity-1,xfwm4} $out/share/themes/Dracula
+      cp -a {assets,gnome-shell,gtk-2.0,gtk-3.0,gtk-3.20,gtk-4.0,index.theme,metacity-1,xfwm4} $out/share/themes/Dracula
       runHook postInstall
     '';
   };
@@ -54,9 +76,10 @@ in
 
     # Standard progs (xinit)
     picom
-    nitrogen
+    feh                # wallpaper; nitrogen removed from nixpkgs (gtk2)
+    gtk-engine-murrine # GTK2 theme engine 
     dunst
-    flameshot-pinned   # 12.1.0 (Qt5) pin; see let-binding above
+    flameshot-pinned   # 12.1.0 (Qt5) pin
     ksnip
     numlockx
 
@@ -84,7 +107,7 @@ in
     pulsar # inputs.pulsar-flake.packages.${pkgs.system}.default
     neovim
     R
-    qgis-pinned   # nixos-25.05 pin; see let-binding above
+    qgis-pinned   # nixos-25.05 pin
     julia-bin
     # Python with default packages
     (python3.withPackages (ps: with ps; [
@@ -119,13 +142,12 @@ in
     libnotify
 
     # Agents
-    gemini-cli-bin
-    geminicommit
     llama-cpp-vulkan   # Vulkan-enabled llama.cpp (uses the 780M iGPU)
     goose-cli
     inputs.claude-code-nix.packages."${pkgs.stdenv.hostPlatform.system}".claude-code # Claude code flake
     inputs.codex-cli-nix.packages."${pkgs.stdenv.hostPlatform.system}".default # Codex CLI flake
     #inputs.antigravity-nix.packages."${pkgs.stdenv.hostPlatform.system}".antigravity # Antigravity flake
+    cli-proxy-api # CLIProxyAPI: serves ChatGPT/Codex OAuth as an Anthropic-compatible API
     mcp-nixos # MCP for nixos
 
   # Themes
@@ -175,6 +197,8 @@ in
     GTK_USE_PORTAL = "1";
     XCURSOR_THEME = "Bibata-Modern-Ice"; # Cursor theme
     XCURSOR_SIZE = "20"; # Cursor size
+    # Lets GTK2 apps (xstata) find the murrine engine the Dracula theme uses
+    GTK_PATH = "${gtk-engine-murrine}/lib/gtk-2.0";
   };
 
   # Global Paths (Replaces export PATH=...)
@@ -219,6 +243,19 @@ in
       # Network
       won = "warp-cli connect";
       woff = "warp-cli disconnect";
+
+      # Claude Code driving GPT models through the local CLIProxyAPI (:8317),
+      # which re-serves the ChatGPT Plus OAuth login as an Anthropic API.
+      # ANTHROPIC_* are scoped to this command only -- never exported. The
+      # shared secret lives in ~/.cli-proxy-api/token (chmod 600, outside this
+      # repo, which is public on GitHub) and is read at invocation time.
+      claudex = "ANTHROPIC_BASE_URL=http://127.0.0.1:8317 "
+        + "ANTHROPIC_AUTH_TOKEN=\"$(cat ~/.cli-proxy-api/token)\" "
+        + "CLAUDE_CODE_SUBAGENT_MODEL=gpt-5.6-sol "
+        + "CLAUDE_CODE_ALWAYS_ENABLE_EFFORT=1 "
+        + "CLAUDE_CODE_MAX_TOOL_USE_CONCURRENCY=3 "
+        + "ENABLE_TOOL_SEARCH=false "
+        + "claude --model gpt-5.6-sol";
     };
 
     # 2. MIGRATE ENVIRONMENT VARIABLES (from .zshenv)
@@ -380,6 +417,28 @@ in
         # Persist compiled Vulkan shaders, so any manual GPU run pays compile cost once.
         "MESA_SHADER_CACHE_DIR=%h/.cache/mesa_shader_cache"
       ];
+    };
+    Install = {
+      WantedBy = [ "default.target" ];
+    };
+  };
+
+  # CLIProxyAPI: serves the ChatGPT/Codex OAuth login as an Anthropic-compatible
+  # API on 127.0.0.1:8317, so the `claudex` alias can run Claude Code on GPT
+  # models. Config and credentials live in ~/.cli-proxy-api (outside this repo).
+  systemd.user.services.cli-proxy-api = {
+    Unit = {
+      Description = "CLIProxyAPI - local OAuth-to-API proxy for coding harnesses";
+      After = [ "network-online.target" ];
+      Wants = [ "network-online.target" ];
+    };
+    Service = {
+      ExecStart = "${cli-proxy-api}/bin/cli-proxy-api -config %h/.cli-proxy-api/config.yaml";
+      Restart = "always";
+      RestartSec = "10";
+      # OPENAI_* are unset defensively: if they ever leak into the user session
+      # again, the proxy must not inherit a pointer to the local llama server.
+      UnsetEnvironment = [ "OPENAI_API_KEY" "OPENAI_BASE_URL" ];
     };
     Install = {
       WantedBy = [ "default.target" ];
