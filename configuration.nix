@@ -297,7 +297,7 @@
   # Allow Unfree Software
   nixpkgs.config.allowUnfree = true;
   nixpkgs.config.permittedInsecurePackages = [
-    "zoom-us"  # permit Zoom
+    "zoom-7.1.5.4332"  # permit Zoom
     "pulsar-1.132.1"  # permit Pulsar editor
     "librewolf-151.0.2-1"  # permit Librewolf (flagged insecure upstream)
     "librewolf-unwrapped-151.0.2-1"  # its unwrapped dependency, flagged separately
