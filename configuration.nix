@@ -298,10 +298,15 @@
   nixpkgs.config.allowUnfree = true;
   nixpkgs.config.permittedInsecurePackages = [
     "zoom-7.1.5.4332"  # permit Zoom
-    "pulsar-1.132.1"  # permit Pulsar editor
+    "pulsar-1.133.1"  # permit Pulsar editor
     "librewolf-151.0.2-1"  # permit Librewolf (flagged insecure upstream)
     "librewolf-unwrapped-151.0.2-1"  # its unwrapped dependency, flagged separately
   ];
+  # gtk2 is now flagged "broken" in nixpkgs (slated for removal before NixOS
+  # 27.05, https://github.com/NixOS/nixpkgs/issues/410814). We still need it
+  # for the murrine engine / Dracula gtk-2.0 theme (xstata), nix-ld, and the
+  # Qt gtk2 platform theme, so downgrade the hard error to a warning.
+  nixpkgs.config.problems.handlers."gtk+".broken = "warn";
 
   # Package opts
   programs.nix-ld.enable = true;
@@ -492,6 +497,17 @@ programs.nix-ld.libraries = with pkgs; [
     substituters = [ "https://claude-code.cachix.org" ];
     trusted-public-keys = [ "claude-code.cachix.org-1:YeXf2aNu7UTX8Vwrze0za1WEDS+4DuI2kVeWEE4fsRk=" ];
   };
+
+  # Automatic garbage collection. Without this every nixos-rebuild keeps its
+  # generation forever; by Nov 2026 177 generations had filled 439G of the
+  # 512G root. Keep two weeks of generations as boot-menu fallbacks and
+  # hard-link identical store files.
+  nix.gc = {
+    automatic = true;
+    dates = "weekly";
+    options = "--delete-older-than 14d";
+  };
+  nix.settings.auto-optimise-store = true;
 
   # Leave at the release version of first install (25.11)
   # Before changing this value read the documentation for this option

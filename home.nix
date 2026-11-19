@@ -100,6 +100,8 @@ in
     google-chrome
     librewolf
 
+    # Meetings
+    zoom-us # needs allow Unfree
 
     # Research / Dev
     texliveFull
@@ -143,10 +145,9 @@ in
 
     # Agents
     llama-cpp-vulkan   # Vulkan-enabled llama.cpp (uses the 780M iGPU)
-    goose-cli
     inputs.claude-code-nix.packages."${pkgs.stdenv.hostPlatform.system}".claude-code # Claude code flake
     inputs.codex-cli-nix.packages."${pkgs.stdenv.hostPlatform.system}".default # Codex CLI flake
-    #inputs.antigravity-nix.packages."${pkgs.stdenv.hostPlatform.system}".antigravity # Antigravity flake
+    inputs.antigravity-nix.packages."${pkgs.stdenv.hostPlatform.system}".google-antigravity-cli # Antigravity CLI flake (`agy`); replaces gemini-cli
     cli-proxy-api # CLIProxyAPI: serves ChatGPT/Codex OAuth as an Anthropic-compatible API
     mcp-nixos # MCP for nixos
 
@@ -386,10 +387,13 @@ in
   gtk.gtk4.theme = config.gtk.theme; 
 
   # QT -> GTK
+  # qt6gtk2 / qtstyleplugins were removed from nixpkgs with the gtk2 purge, so
+  # the "gtk2" platform theme no longer evaluates. Use Qt's native GTK3
+  # platform-theme plugin instead; it picks up the GTK3 Dracula theme, fonts,
+  # and file dialogs without any extra package.
   qt = {
     enable = true;
-    platformTheme.name = "gtk2";
-    style.name = "gtk2";
+    platformTheme.name = "gtk3";
   };
 
   # Services
