@@ -1,36 +1,20 @@
 { config, pkgs, inputs, ... }:
 
 let
-  # llama.cpp built with the Vulkan backend so the integrated Radeon 780M
-  # (RADV PHOENIX) is actually used for inference instead of CPU-only BLAS.
+  system = pkgs.stdenv.hostPlatform.system;
+
+  # Vulkan-enabled llama.cpp for the Radeon 780M iGPU.
   llama-cpp-vulkan = pkgs.llama-cpp.override { vulkanSupport = true; };
 
-  # Flameshot pinned to nixos-25.05 (12.1.0, Qt5). Unstable's 14.0.0 (Qt6)
-  # routes all captures through xdg-desktop-portal, which has no working
-  # Screenshot backend under bare dwm -> "portal timed out after 30 seconds".
-  # The 12.x build grabs X11 directly, so the tray icon + Print shortcut work.
-  flameshot-pinned =
-    inputs.nixpkgs-flameshot.legacyPackages.${pkgs.stdenv.hostPlatform.system}.flameshot;
+  # Pinned to nixos-25.05: unstable's flameshot 14 (Qt6) requires an xdg-desktop-portal
+  # Screenshot backend (absent in dwm), and unstable's qgis/pdal breaks on newer GDAL.
+  flameshot-pinned = inputs.nixpkgs-flameshot.legacyPackages.${system}.flameshot;
+  qgis-pinned = inputs.nixpkgs-flameshot.legacyPackages.${system}.qgis;
 
-  # QGIS pinned to nixos-25.05 (reusing the stable pin above). On unstable,
-  # qgis pulls pdal, which fails to build against unstable's newer GDAL
-  # (GetMetadata() now returns CSLConstList) and needed a -fpermissive
-  # override -> a from-source rebuild of pdal AND qgis on every nixpkgs bump.
-  # The 25.05 stable channel predates that GDAL change, so pdal/qgis build
-  # cleanly there and come straight from cache.nixos.org -- no override, no
-  # local compilation. Revisit in a few months if a newer qgis is needed.
-  qgis-pinned =
-    inputs.nixpkgs-flameshot.legacyPackages.${pkgs.stdenv.hostPlatform.system}.qgis;
-
-  # CLIProxyAPI: local proxy that re-serves CLI OAuth logins (ChatGPT/Codex,
-  # Claude, Gemini) as OpenAI-/Anthropic-compatible HTTP APIs on :8317.
-  # Not in nixpkgs; packaged locally in ./pkgs.
+  # Local OAuth-to-API proxy (:8317) packaged in ./pkgs.
   cli-proxy-api = pkgs.callPackage ./pkgs/cli-proxy-api.nix { };
 
-  # - Fix GTK2 app theming
-    # gtk-engine-murrine was removed from nixpkgs (GTK2 purge), 
-    # but the gtk2 library still exists.
-    # Rebuild murrine from the last GNOME release and set GTK_PATH
+  # Rebuilt from GNOME sources after nixpkgs' GTK2 purge (needed for Dracula GTK2 / xstata).
   gtk-engine-murrine = pkgs.stdenv.mkDerivation rec {
     pname = "gtk-engine-murrine";
     version = "0.98.2";
@@ -40,14 +24,10 @@ let
     };
     nativeBuildInputs = with pkgs; [ pkg-config intltool ];
     buildInputs = [ pkgs.gtk2 ];
-    # GCC >= 14 makes implicit function declarations a hard error; murrine's
-    # 2012-era C relies on them (murrine_widget_is_ltr etc. lack prototypes).
-    env.NIX_CFLAGS_COMPILE = "-Wno-error=implicit-function-declaration";
+    env.NIX_CFLAGS_COMPILE = "-Wno-error=implicit-function-declaration"; # GCC >= 14
   };
 
-  # dracula-theme was removed from nixpkgs because it depended on
-  # gtk-engine-murrine (see above). Build it directly from the upstream
-  # flake input instead, including gtk-2.0 for xstata.
+  # Built from flake input after nixpkgs removed dracula-theme.
   dracula-theme = pkgs.stdenvNoCC.mkDerivation {
     pname = "dracula-theme";
     version = "unstable-2026-07-31";
@@ -65,53 +45,46 @@ in
   home.username = "ved";
   home.homeDirectory = "/home/ved";
 
-  # Install User Packages
+  # --- Packages ---
   home.packages = with pkgs; [
-    # Core Tools
-    zsh # Shell
-    ripgrep fd 
+    # Shell & CLI
+    zsh
     unzip jq tree p7zip unrar atool
-    ranger
     lf
 
-    # Standard progs (xinit)
+    # X11 & Desktop
     picom
-    feh                # wallpaper; nitrogen removed from nixpkgs (gtk2)
-    gtk-engine-murrine # GTK2 theme engine 
+    feh
+    gtk-engine-murrine
     dunst
-    flameshot-pinned   # 12.1.0 (Qt5) pin
+    flameshot-pinned
     ksnip
     numlockx
-
-    # x11 utils
     xdg-utils
     xset
     setxkbmap
     xsetroot
 
-    # Tray apps
+    # Tray
     networkmanagerapplet
     blueman
     pasystray
     solaar
 
-    # Browsers
-    inputs.zen-browser.packages."${pkgs.stdenv.hostPlatform.system}".default
+    # Browsers & Comms
+    inputs.zen-browser.packages.${system}.default
     google-chrome
     librewolf
+    zoom-us
+    slack
 
-    # Meetings
-    zoom-us # needs allow Unfree
-
-    # Research / Dev
+    # Research & Dev
     texliveFull
-    texlab # language server for neovim
-    pulsar # inputs.pulsar-flake.packages.${pkgs.system}.default
-    neovim
+    texlab
+    pulsar
     R
-    qgis-pinned   # nixos-25.05 pin
+    qgis-pinned
     julia-bin
-    # Python with default packages
     (python3.withPackages (ps: with ps; [
       pandas
       numpy
@@ -122,9 +95,8 @@ in
 
     # Apps
     keepassxc
-    maestral # Dropbox client
-    maestral-gui # Dropbox client (GUI)
-    slack
+    maestral
+    maestral-gui
     touchegg
     emacs
     electrum
@@ -133,7 +105,7 @@ in
     obs-studio
     tor
     tor-browser
-    libreoffice-fresh
+    libreoffice
     thunar
     autorandr
     zathura
@@ -143,66 +115,36 @@ in
     mpv
     libnotify
 
-    # Agents
-    llama-cpp-vulkan   # Vulkan-enabled llama.cpp (uses the 780M iGPU)
-    inputs.claude-code-nix.packages."${pkgs.stdenv.hostPlatform.system}".claude-code # Claude code flake
-    inputs.codex-cli-nix.packages."${pkgs.stdenv.hostPlatform.system}".default # Codex CLI flake
-    inputs.antigravity-nix.packages."${pkgs.stdenv.hostPlatform.system}".google-antigravity-cli # Antigravity CLI flake (`agy`); replaces gemini-cli
-    cli-proxy-api # CLIProxyAPI: serves ChatGPT/Codex OAuth as an Anthropic-compatible API
-    mcp-nixos # MCP for nixos
+    # AI / Agents
+    llama-cpp-vulkan
+    inputs.claude-code-nix.packages.${system}.claude-code
+    inputs.codex-cli-nix.packages.${system}.default
+    inputs.antigravity-nix.packages.${system}.google-antigravity-cli
+    cli-proxy-api
+    mcp-nixos
 
-  # Themes
+    # Themes
     gnome-tweaks
-    dracula-icon-theme      # Icon theme
+    dracula-icon-theme
     bibata-cursors
-    gnome-themes-extra      # Other GNOME themes
+    gnome-themes-extra
     adwaita-icon-theme
   ];
 
-  # XDG Defaults
-  xdg.mimeApps = {
-    enable = true;
-    defaultApplications = {
-      "text/plain" = "nvim.desktop";
-      "text/x-lua" = "nvim.desktop";
-      "application/x-lua" = "nvim.desktop";
-      
-      # Catch-alls for "random/unknown" files:
-      "application/octet-stream" = "nvim.desktop"; # Unrecognized/binary files
-      "application/x-zerosize" = "nvim.desktop";   # Completely empty files
-
-      # Browser
-      "text/html" = "zen-beta.desktop";
-      "x-scheme-handler/http" = "zen-beta.desktop";
-      "x-scheme-handler/https" = "zen-beta.desktop";
-      "x-scheme-handler/about" = "zen-beta.desktop";
-      "x-scheme-handler/unknown" = "zen-beta.desktop";
-    };
-  };
-
-  # Git Config
-  programs.git = {
-    enable = true;
-    settings.user.name = "Ved Shastry";
-    settings.user.email = "vedarshis@gmail.com";
-  };
-
-  # Global Variables (Replaces exports in .zshenv/.zprofile)
+  # --- Session Environment ---
   home.sessionVariables = {
     EDITOR = "nvim";
     VISUAL = "nvim";
     BROWSER = "zen-beta";
     PDFVIEWER = "zathura";
     OPENER = "rifle";
-    XDG_CURRENT_DESKTOP = "gtk"; # Tells Electron/GTK to use the GTK file chooser portal
+    XDG_CURRENT_DESKTOP = "gtk"; # Use GTK file chooser portal in Electron/GTK apps
     GTK_USE_PORTAL = "1";
-    XCURSOR_THEME = "Bibata-Modern-Ice"; # Cursor theme
-    XCURSOR_SIZE = "20"; # Cursor size
-    # Lets GTK2 apps (xstata) find the murrine engine the Dracula theme uses
+    XCURSOR_THEME = "Bibata-Modern-Ice";
+    XCURSOR_SIZE = "20";
     GTK_PATH = "${gtk-engine-murrine}/lib/gtk-2.0";
   };
 
-  # Global Paths (Replaces export PATH=...)
   home.sessionPath = [
     "$HOME/scripts"
     "$HOME/ado"
@@ -210,21 +152,20 @@ in
     "$HOME/.local/bin"
   ];
 
-  # Zsh config
+  # --- Zsh ---
   programs.zsh = {
     enable = true;
     enableCompletion = true;
     autosuggestion.enable = true;
     syntaxHighlighting.enable = true;
 
-    # 1. MIGRATE ALIASES
     shellAliases = {
       # System
       ll = "ls -l";
-      reboot = "systemctl reboot"; # Use systemctl instead of /sbin/reboot
+      reboot = "systemctl reboot";
       slp = "systemctl suspend";
 
-      # Editors
+      # Editors & Stata
       vim = "nvim";
       v = "nvim";
       vp = "nvim -p";
@@ -232,24 +173,20 @@ in
       smp = "stata-mp";
       xmp = "xstata-mp";
 
-      # NixOS specifics (replacing your 'p=sudo pacman')
+      # NixOS
       update = "sudo nixos-rebuild switch --flake ~/repos/nixos#thinkpad";
       sysup = "nix flake update --flake ~/repos/nixos && sudo nixos-rebuild switch --flake ~/repos/nixos#thinkpad";
 
       # Workflow
-      lad = "ls -d .*(/)"; # Only dot-directories
-      lsa = "ls -a .*(.)"; # Only dot-files
-      pyenv = "source .venv/bin/activate"; # Generalized to local folder
+      lad = "ls -d .*(/)";
+      lsa = "ls -a .*(.)";
+      pyenv = "source .venv/bin/activate";
 
       # Network
       won = "warp-cli connect";
       woff = "warp-cli disconnect";
 
-      # Claude Code driving GPT models through the local CLIProxyAPI (:8317),
-      # which re-serves the ChatGPT Plus OAuth login as an Anthropic API.
-      # ANTHROPIC_* are scoped to this command only -- never exported. The
-      # shared secret lives in ~/.cli-proxy-api/token (chmod 600, outside this
-      # repo, which is public on GitHub) and is read at invocation time.
+      # Claude Code via local CLIProxyAPI (:8317); token lives in ~/.cli-proxy-api/token.
       claudex = "ANTHROPIC_BASE_URL=http://127.0.0.1:8317 "
         + "ANTHROPIC_AUTH_TOKEN=\"$(cat ~/.cli-proxy-api/token)\" "
         + "CLAUDE_CODE_SUBAGENT_MODEL=gpt-5.6-sol "
@@ -259,68 +196,60 @@ in
         + "claude --model gpt-5.6-sol";
     };
 
-    # 2. MIGRATE ENVIRONMENT VARIABLES (from .zshenv)
-    sessionVariables = {
-      EDITOR = "nvim";
-      VISUAL = "nvim";
-      BROWSER = "zen-beta";
-      PDFVIEWER = "zathura";
-      OPENER = "rifle";
-
-      # AI Agents
-      # NOTE: OPENAI_BASE_URL / OPENAI_API_KEY are deliberately NOT exported
-      # globally. Codex CLI honours them and would silently route a real
-      # ChatGPT session at the local llama.cpp server. Use the `local-ai`
-      # shell function below to scope them to a single command.
-    };
-
-    # 3. MIGRATE COMPLEX LOGIC (.zshrc + .zprofile)
     initContent = ''
-      # --- Custom Prompt (Ported from your config) ---
       PROMPT='%F{white}%n%f@%F{green}%m%f %F{blue}%B%~%b%f %# '
       RPROMPT='[%F{yellow}%?%f]'
-
-      # --- Bindkeys ---
       bindkey -v
 
-      # --- Local llama.cpp inference (scoped, not global) ---
-      # Usage: local-ai <command ...>   e.g. `local-ai aichat "hi"`
+      # Scoped local llama.cpp wrapper (keep OPENAI_* out of global env so Codex CLI isn't hijacked).
       local-ai() {
         OPENAI_BASE_URL="http://127.0.0.1:8080/v1" \
         OPENAI_API_KEY="sk-local" \
         "$@"
       }
 
-      # --- Fix for GTK/Electron Apps in dwm ---
       export XDG_DATA_DIRS="${pkgs.gsettings-desktop-schemas}/share/gsettings-schemas/${pkgs.gsettings-desktop-schemas.name}:${pkgs.gtk3}/share/gsettings-schemas/${pkgs.gtk3.name}:$XDG_DATA_DIRS"
-      
-      export XDG_CURRENT_DESKTOP=gtk
 
-      # --- StartX on Login (from .zprofile) ---
       if [ -z "''${DISPLAY}" ] && [ "''${XDG_VTNR}" -eq 1 ]; then
         exec startx
       fi
     '';
 
-    # 4. MIGRATE ANTIBODY PLUGINS
-    plugins = [
-      {
-        name = "zsh-autosuggestions";
-        src = pkgs.zsh-autosuggestions;
-      }
-    ];
-
-    # 5. OH-MY-ZSH
     oh-my-zsh = {
       enable = true;
       plugins = [ "git" "docker" "python" "sudo" ];
-      theme = ""; 
+      theme = "";
     };
   };
 
-  ############ THEMES
+  # --- Git ---
+  programs.git = {
+    enable = true;
+    settings.user = {
+      name = "Ved Shastry";
+      email = "vedarshis@gmail.com";
+    };
+  };
 
-  # Xresources
+  # --- XDG / MIME ---
+  xdg.mimeApps = {
+    enable = true;
+    defaultApplications = {
+      "text/plain" = "nvim.desktop";
+      "text/x-lua" = "nvim.desktop";
+      "application/x-lua" = "nvim.desktop";
+      "application/octet-stream" = "nvim.desktop";
+      "application/x-zerosize" = "nvim.desktop";
+
+      "text/html" = "zen-beta.desktop";
+      "x-scheme-handler/http" = "zen-beta.desktop";
+      "x-scheme-handler/https" = "zen-beta.desktop";
+      "x-scheme-handler/about" = "zen-beta.desktop";
+      "x-scheme-handler/unknown" = "zen-beta.desktop";
+    };
+  };
+
+  # --- Theming ---
   xresources.properties = {
     "*.foreground" = "#e6e1dc";
     "*.background" = "#2b2b2b";
@@ -328,97 +257,72 @@ in
 
     "*.color0" = "#2b2b2b";
     "*.color8" = "#5a647e";
-
     "*.color1" = "#da4939";
     "*.color9" = "#da4939";
-
     "*.color2" = "#a5c261";
     "*.color10" = "#a5c261";
-
     "*.color3" = "#ffc66d";
     "*.color11" = "#ffc66d";
-
     "*.color4" = "#6d9cbe";
     "*.color12" = "#6d9cbe";
-
     "*.color5" = "#b6b3eb";
     "*.color13" = "#b6b3eb";
-
     "*.color6" = "#519f50";
     "*.color14" = "#519f50";
-
     "*.color7" = "#e6e1dc";
     "*.color15" = "#f9f7f3";
   };
 
-  # Configure GTK Declaratively
   gtk = {
     enable = true;
-
     theme = {
-      name = "Dracula";             
+      name = "Dracula";
       package = dracula-theme;
     };
-
     iconTheme = {
-      name = "Dracula";             
+      name = "Dracula";
       package = pkgs.dracula-icon-theme;
     };
-
     font = {
       name = "Noto Sans";
       size = 10;
     };
-
     gtk2.configLocation = "${config.xdg.configHome}/gtk-2.0/gtkrc";
+    gtk4.theme = config.gtk.theme;
   };
 
-  # Mouse Cursor
-  home.file.".icons/default".source = "${pkgs.bibata-cursors}/share/icons/Bibata-Modern-Ice"; 
   home.pointerCursor = {
     enable = true;
     gtk.enable = true;
-    x11.enable = true;      
-    name = "Bibata-Modern-Ice";               
+    x11.enable = true;
+    name = "Bibata-Modern-Ice";
     package = pkgs.bibata-cursors;
     size = 20;
   };
 
-  gtk.gtk4.theme = config.gtk.theme; 
-
-  # QT -> GTK
-  # qt6gtk2 / qtstyleplugins were removed from nixpkgs with the gtk2 purge, so
-  # the "gtk2" platform theme no longer evaluates. Use Qt's native GTK3
-  # platform-theme plugin instead; it picks up the GTK3 Dracula theme, fonts,
-  # and file dialogs without any extra package.
   qt = {
     enable = true;
     platformTheme.name = "gtk3";
   };
 
-  # Services
+  # --- User Services ---
   services.blueman-applet.enable = true;
   services.syncthing = {
     enable = true;
     tray.enable = true;
   };
 
-  # Run Llama daemon
   systemd.user.services.llama-server = {
     Unit = {
       Description = "llama.cpp Router Mode Server";
       After = [ "network.target" ];
     };
     Service = {
-      # Default to CPU (no -ngl): on the 780M, Vulkan offload gives ~no generation
-      # speedup (shared RAM bus) yet costs a 5+ min first-run shader compile.
-      # Benchmarked: OLMoE (1B active) hits ~34 tok/s gen / ~200 tok/s prompt on CPU.
-      # To experiment with GPU offload on a big dense model, add: -ngl 99
+      # CPU by default (add `-ngl 99` for GPU offload); persists Vulkan shader cache if used.
       ExecStart = "${llama-cpp-vulkan}/bin/llama-server --models-dir %h/ai --port 8080 -c 32768 --models-max 1 --flash-attn on";
       Restart = "always";
       RestartSec = "10";
       Environment = [
-        # Persist compiled Vulkan shaders, so any manual GPU run pays compile cost once.
         "MESA_SHADER_CACHE_DIR=%h/.cache/mesa_shader_cache"
       ];
     };
@@ -427,9 +331,6 @@ in
     };
   };
 
-  # CLIProxyAPI: serves the ChatGPT/Codex OAuth login as an Anthropic-compatible
-  # API on 127.0.0.1:8317, so the `claudex` alias can run Claude Code on GPT
-  # models. Config and credentials live in ~/.cli-proxy-api (outside this repo).
   systemd.user.services.cli-proxy-api = {
     Unit = {
       Description = "CLIProxyAPI - local OAuth-to-API proxy for coding harnesses";
@@ -440,8 +341,6 @@ in
       ExecStart = "${cli-proxy-api}/bin/cli-proxy-api -config %h/.cli-proxy-api/config.yaml";
       Restart = "always";
       RestartSec = "10";
-      # OPENAI_* are unset defensively: if they ever leak into the user session
-      # again, the proxy must not inherit a pointer to the local llama server.
       UnsetEnvironment = [ "OPENAI_API_KEY" "OPENAI_BASE_URL" ];
     };
     Install = {
@@ -449,6 +348,5 @@ in
     };
   };
 
-  # Version
   home.stateVersion = "25.11";
 }

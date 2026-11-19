@@ -1,36 +1,63 @@
 { config, pkgs, inputs, ... }:
 
 {
-
-  # Hardware config
   imports = [ ./hardware-configuration.nix ];
 
-  # Networking
+  # --- Boot & Hardware ---
+  # Override nixos-hardware's acpi.ec_no_wakeup=1 so dock/AC attach wakes from s2idle.
+  # See docs/agent-context/t14-gen5-amd-sleep-constraints.md.
+  boot.kernelParams = [ "acpi.ec_no_wakeup=0" ];
+
+  hardware.graphics = {
+    enable = true;
+    enable32Bit = true;
+  };
+
+  hardware.keyboard.qmk.enable = true;
+
+  hardware.bluetooth = {
+    enable = true;
+    powerOnBoot = true;
+  };
+  services.blueman.enable = true;
+
+  services.udev.extraRules = ''
+    # Non-root access for NuPhy V2 keyboard
+    KERNEL=="hidraw*", SUBSYSTEM=="hidraw", ATTRS{idVendor}=="19f5", ATTRS{idProduct}=="32f5", MODE="0660", GROUP="users", TAG+="uaccess", TAG+="udev-acl",
+    ACTION=="change", SUBSYSTEM=="drm", RUN+="${pkgs.systemd}/bin/systemctl restart --no-block monitor-hotplug.service"
+    ACTION=="change", SUBSYSTEM=="power_supply", ENV{POWER_SUPPLY_TYPE}=="Mains", RUN+="${pkgs.systemd}/bin/systemctl start --no-block power-suspend-guard.service"
+    ACTION=="change", SUBSYSTEM=="power_supply", ENV{POWER_SUPPLY_TYPE}=="USB", RUN+="${pkgs.systemd}/bin/systemctl start --no-block power-suspend-guard.service"
+  '';
+
+  # --- Networking & Firewall ---
   networking.hostName = "thinkpad";
-  networking.networkmanager.enable = true; # Enable networkmanager
-  services.openssh.enable = true; # openSSH Daemon
-  services.openssh.settings.X11Forwarding = true; # Useful for later
+  networking.networkmanager.enable = true;
 
-  # Tailscale: WireGuard mesh VPN. Gives this host a stable 100.x tailnet IP
-  # reachable from the iPad anywhere -- no port-forwarding, no Double-NAT.
-  # After `nixos-rebuild switch`, run `sudo tailscale up` once to authenticate.
-  # openFirewall (default true) opens UDP 41641 so peers can connect directly.
+  services.openssh = {
+    enable = true;
+    settings.X11Forwarding = true;
+  };
+
+  # Tailscale mesh VPN; trust tailscale0 so SSH (22) and VNC (5900) work over
+  # the tailnet without exposing VNC on the LAN.
   services.tailscale.enable = true;
-
-  # Trust the tailnet interface: SSH (22) and VNC (5900) are reachable over
-  # Tailscale without exposing either on the LAN / guest wifi.
   networking.firewall.trustedInterfaces = [ "tailscale0" ];
-
-  # LAN-exposed ports: ssh only, for same-wifi admin. VNC (5900) is intentionally
-  # NOT opened here -- it is reachable only over the trusted tailnet interface.
   networking.firewall.allowedTCPPorts = [ 22 ];
 
-  # Time & Locale
-  # Dynamic timezone: automatic-timezoned uses GeoClue2 (WiFi/IP geolocation)
-  # to set the system zone at runtime, so travelling updates the clock
-  # automatically. Note: time.timeZone must stay UNSET
+  services.mullvad-vpn = {
+    enable = true;
+    gui.enable = true;
+  };
+  services.resolved.enable = true;
+
+  # Cloudflare WARP
+  systemd.packages = [ pkgs.cloudflare-warp ];
+  systemd.services.warp-svc.wantedBy = [ "multi-user.target" ];
+
+  # --- Time, Locale & Users ---
+  # Dynamic timezone via GeoClue2 (time.timeZone must stay unset).
   services.automatic-timezoned.enable = true;
-  services.geoclue2.enable = true; # GeoClue needs a location source; enable the daemon and allow it to run.
+  services.geoclue2.enable = true;
 
   i18n.defaultLocale = "en_US.UTF-8";
   i18n.extraLocaleSettings = {
@@ -39,7 +66,6 @@
     LC_TIME = "en_US.UTF-8";
   };
 
-  # User Account
   users.users.ved = {
     isNormalUser = true;
     uid = 1000;
@@ -49,137 +75,42 @@
   };
   programs.zsh.enable = true;
 
-  # Graphics & Hardware
-  hardware.graphics = {
-    enable = true;
-    enable32Bit = true; # for legacy support
-  };
-  # Enable non-root access to QMK/VIA keyboards
-  hardware.keyboard.qmk.enable = true;
-  # If the standard QMK rule doesn't catch the NuPhy V2
-  services.udev.extraRules = ''
-    KERNEL=="hidraw*", SUBSYSTEM=="hidraw", ATTRS{idVendor}=="19f5", ATTRS{idProduct}=="32f5", MODE="0660", GROUP="users", TAG+="uaccess", TAG+="udev-acl",
-    ACTION=="change", SUBSYSTEM=="drm", RUN+="${pkgs.systemd}/bin/systemctl restart --no-block monitor-hotplug.service"
-    ACTION=="change", SUBSYSTEM=="power_supply", ENV{POWER_SUPPLY_TYPE}=="Mains", RUN+="${pkgs.systemd}/bin/systemctl start --no-block power-suspend-guard.service"
-    ACTION=="change", SUBSYSTEM=="power_supply", ENV{POWER_SUPPLY_TYPE}=="USB", RUN+="${pkgs.systemd}/bin/systemctl start --no-block power-suspend-guard.service"
-  '';
-
-  # Enable Bluetooth
-  hardware.bluetooth.enable = true;
-  hardware.bluetooth.powerOnBoot = true; # Power up the default controller on boot
-  services.blueman.enable = true; # Enables the Blueman service, Polkit rules, and D-Bus integration
-
-  # Services
-  services.mullvad-vpn.enable = true; # Mullvad
-  services.mullvad-vpn.gui.enable = true; # Mullvad GUI
-  services.resolved.enable = true;  # Resolve DNS systemd
-
-# Power Management (TLP)
-  services.power-profiles-daemon.enable = false; # Conflict with TLP
+  # --- Power & Sleep ---
+  # See docs/agent-context/t14-gen5-amd-sleep-constraints.md for ThinkPad T14 Gen 5 sleep behavior.
+  services.power-profiles-daemon.enable = false; # conflicts with TLP
   services.tlp = {
     enable = true;
     settings = {
-      # --- General Settings ---
       TLP_ENABLE = 1;
 
-      # --- Battery Care (ThinkPad Specific) ---
-      # Start charging at 75%, stop at 80%. 
-      # For "Always on AC" usage to extend battery lifespan.
+      # Battery charge thresholds (always-on-AC longevity)
       START_CHARGE_THRESH_BAT0 = 75;
       STOP_CHARGE_THRESH_BAT0 = 80;
 
-      # --- CPU / Platform Profiles
-      # "performance" on AC allows the CPU to boost high for Stata
-      # "balanced" or "low-power" on BAT keeps it cool
+      # CPU / platform profiles
       PLATFORM_PROFILE_ON_AC = "performance";
       PLATFORM_PROFILE_ON_BAT = "low-power";
-
-      # AMD P-State EPP (Energy Performance Preference)
-      # This is the modern replacement for "governors" on Zen 3/4
       CPU_ENERGY_PERF_POLICY_ON_AC = "performance";
       CPU_ENERGY_PERF_POLICY_ON_BAT = "balance_power";
-
-      # Scaling Governor (Fallback, but good to set)
       CPU_SCALING_GOVERNOR_ON_AC = "performance";
       CPU_SCALING_GOVERNOR_ON_BAT = "powersave";
-
-      # --- Boost Logic ---
-      # Allow Turbo Boost on AC
-      # Disable on Battery
       CPU_BOOST_ON_AC = 1;
       CPU_BOOST_ON_BAT = 0;
-
-      # --- Radio Devices ---
-      # Don't touch bluetooth on boot
-      # RESTORE_DEVICE_STATE_ON_STARTUP = 1;
     };
   };
 
-    # Xorg server
-      services.xserver = {
-        enable = true;
-        windowManager.dwm.enable = true;
-        displayManager.startx.enable = true; # Keep it simple, or use a DM like sddm
-      };
-
-      services.libinput.enable = true; # Enable touchpad support
-      services.printing.enable = true; # Printing
-      security.rtkit.enable = true; # Scheduling
-      security.polkit.enable = true; # access for GUI apps
-      services.pulseaudio.enable = false; # Disable pulse for pipewire
-      services.gvfs.enable = true; # Mount, trash, and remote filesystem support
-      services.tumbler.enable = true; # Thumbnail support for Thunar
-
-  # Libinput opts
-  services.libinput = {
-      touchpad = {
-        naturalScrolling = false;
-        tapping = true;
-        tappingDragLock = true;
-        disableWhileTyping = false;
-        middleEmulation = true;
-        scrollMethod = "twofinger";
-      };
-    };
-
-  # Resume on dock/AC attach: this T14 Gen5 AMD only supports s2idle (no S3).
-  # The nixos-hardware lenovo-thinkpad-t14-amd-gen5 module sets
-  # acpi.ec_no_wakeup=1, which disables the embedded controller as a wake
-  # source -- but the EC is exactly what detects "power attached". Appending
-  # =0 overrides it (last value on the cmdline wins) so plugging the dock wakes
-  # the machine from s2idle. Trade-off: the EC may also raise spurious wakes;
-  # revert if the battery drains while bagged.
-  boot.kernelParams = [ "acpi.ec_no_wakeup=0" ];
-
-  # Power Management & Lid Switch Behavior
-  #
-  # logind owns the lid-close decision again (it reads the PNP0C0D "Lid Switch"
-  # on event4 reliably; the acpid `button/lid` netlink path could not be
-  # confirmed firing after the kernel 7.1.3 bump, which is why lid-close
-  # silently stopped suspending on this generation).
-  #
-  # Clamshell behaviour, keyed on logind's three lid branches (evaluated in
-  # this precedence: Docked -> ExternalPower -> plain):
-  #   * Docked = external display connected -> IGNORE  (lid shut with monitors:
-  #       stay awake, keep the externals live; the internal panel is already
-  #       turned off by xmonitors.sh's dock layout).
-  #   * ExternalPower = charger only, no monitors      -> SUSPEND.
-  #   * plain = on battery, no monitors                -> SUSPEND.
-  #
-  # The one logind weakness -- stale DRM "docked" state across a Thunderbolt
-  # UNPLUG (it can keep thinking a monitor is attached and refuse to suspend) --
-  # is covered separately by power-suspend-guard below, which suspends off the
-  # power_supply event, independent of the display count.
+  # Clamshell: ignore lid close only when docked with an external display.
   services.logind.settings.Login = {
     HandleLidSwitch = "suspend";
     HandleLidSwitchExternalPower = "suspend";
     HandleLidSwitchDocked = "ignore";
   };
 
-  # Monitor hotplugging
+  # Retired: logind handles lid close and power-suspend-guard handles USB-C dock unplug.
+  services.acpid.enable = false;
+
   systemd.services.monitor-hotplug = {
     description = "Trigger monitor hotplug";
-    # Ensure it only runs after the graphics stack is up
     after = [ "display-manager.service" ];
     serviceConfig = {
       Type = "oneshot";
@@ -193,46 +124,16 @@
     };
   };
 
-  # --- SUSPEND MANAGEMENT ---
-  #
-  # The machine suspends only via the power-suspend-guard service below.
-  # Display routing is owned entirely by udev -> monitor-hotplug.service; the
-  # suspend path never touches xrandr.
-  #
-  # Why not acpid for power? On this Type-C/Thunderbolt dock, yanking the cable
-  # does NOT emit a classic ACPI `ac_adapter` event (verified: acpid logs zero
-  # power events during a dock disconnect). Power is delivered through the UCSI
-  # USB-C controller, whose driver reliably fires a `power_supply` udev `change`
-  # event instead. So the suspend trigger lives on the power_supply subsystem.
-  #
-  # acpid's lid handler is retired: logind now owns lid-close suspend (see the
-  # logind block above). The old acpid `button/lid` handler could not be
-  # confirmed to fire after the kernel 7.1.3 bump and wrote no logs, so lid-close
-  # silently stopped suspending. acpid stays off; the unplug path lives in
-  # power-suspend-guard (udev power_supply), which never needed acpid.
-  services.acpid.enable = false;
-
-  # Suspend guard: fired by the power_supply udev rule on AC/USB-C power change.
-  # Polls up to 8s to ride out the 5-7s 0V drop during a Thunderbolt PD
-  # handshake. If power comes back -> docking/charging, stay awake. If power
-  # stays gone and the lid is shut -> the cable was yanked, suspend.
+  # Fired by udev on power_supply change; polls 8s to ride out Thunderbolt PD drops
+  # and suspends if external power stays gone with the lid closed.
   systemd.services.power-suspend-guard = {
     description = "Suspend when external power is lost and lid is closed (Type-C aware)";
     path = [ pkgs.coreutils pkgs.gnugrep pkgs.gawk pkgs.systemd ];
     serviceConfig.Type = "oneshot";
-    # A single dock connect emits a STORM of power_supply changes (PD
-    # renegotiation), each starting this unit. The default limiter
-    # (5 starts / 10s) would then refuse the *next* real event — e.g. the
-    # unplug — with "start request repeated too quickly", so the machine would
-    # never suspend. Disable the limiter; the 8s poll + oneshot job coalescing
-    # already keep concurrency bounded.
-    unitConfig.StartLimitIntervalSec = "0";
+    unitConfig.StartLimitIntervalSec = "0"; # avoid rate-limiting during PD renegotiation bursts
     script = ''
       LOG=/tmp/power-suspend-guard.log
 
-      # Count supplies reporting exactly online=1, across the canonical AC
-      # (Mains) line plus every UCSI USB-C source (the dock's real path).
-      # `|| true` keeps grep's exit-1-on-zero-matches from failing the unit.
       online_count() {
         cat /sys/class/power_supply/AC/online \
             /sys/class/power_supply/ucsi-source-psy-*/online 2>/dev/null \
@@ -241,8 +142,6 @@
 
       echo "=== $(date) power_supply change (start online=$(online_count)) ===" >> "$LOG"
 
-      # Poll up to 8s to ride out the 5-7s 0V drop during a Thunderbolt PD
-      # handshake. If power ever shows up -> docking/charging, stay awake.
       for _ in $(seq 1 8); do
         N=$(online_count)
         if [ "$N" -gt 0 ]; then
@@ -262,167 +161,83 @@
     '';
   };
 
-  # Audio (pipewire)
+  # --- Desktop, Xorg & Audio ---
+  services.xserver = {
+    enable = true;
+    windowManager.dwm.enable = true;
+    displayManager.startx.enable = true;
+  };
+
+  services.libinput = {
+    enable = true;
+    touchpad = {
+      naturalScrolling = false;
+      tapping = true;
+      tappingDragLock = true;
+      disableWhileTyping = false;
+      middleEmulation = true;
+      scrollMethod = "twofinger";
+    };
+  };
+
+  security.rtkit.enable = true;
+  security.polkit.enable = true;
+  services.pulseaudio.enable = false;
   services.pipewire = {
     enable = true;
     audio.enable = true;
     alsa.enable = true;
-    alsa.support32Bit = true; # ALSA Legacy
-    pulse.enable = true; # Pipewire - pulse
-    jack.enable = true;
+    alsa.support32Bit = true;
+    pulse.enable = true;
     wireplumber.enable = true;
   };
 
-  # Cloudflare WARP (Systemd Service)
-  systemd.packages = [ pkgs.cloudflare-warp ];
-  systemd.services.warp-svc.wantedBy = [ "multi-user.target" ];
+  services.printing.enable = true;
+  services.gvfs.enable = true;
+  services.tumbler.enable = true;
+  programs.dconf.enable = true;
 
-  # Ollama 
+  xdg.portal = {
+    enable = true;
+    extraPortals = [ pkgs.xdg-desktop-portal-gtk ];
+    config.common.default = "gtk";
+  };
+
+  # --- Services ---
   services.ollama = {
     enable = true;
-    
-    # Use the rocm-specific package from the flake directly
-    #package = inputs.ollama-flake.packages.${pkgs.system}.rocm;
     package = pkgs.ollama-rocm;
-
     environmentVariables = {
-      HSA_OVERRIDE_GFX_VERSION = "11.0.2"; 
-      OLLAMA_INTEL_GPU = "0"; 
-      OLLAMA_KEEP_ALIVE = "1h"; 
-      # This helps Ollama's internal discovery know to use the ROCm path
+      HSA_OVERRIDE_GFX_VERSION = "11.0.2";
+      OLLAMA_INTEL_GPU = "0";
+      OLLAMA_KEEP_ALIVE = "1h";
       OLLAMA_LLM_LIBRARY = "rocm";
     };
   };
 
-  # Allow Unfree Software
-  nixpkgs.config.allowUnfree = true;
-  nixpkgs.config.permittedInsecurePackages = [
-    "zoom-7.1.5.4332"  # permit Zoom
-    "pulsar-1.133.1"  # permit Pulsar editor
-    "librewolf-151.0.2-1"  # permit Librewolf (flagged insecure upstream)
-    "librewolf-unwrapped-151.0.2-1"  # its unwrapped dependency, flagged separately
-  ];
-  # gtk2 is now flagged "broken" in nixpkgs (slated for removal before NixOS
-  # 27.05, https://github.com/NixOS/nixpkgs/issues/410814). We still need it
-  # for the murrine engine / Dracula gtk-2.0 theme (xstata), nix-ld, and the
-  # Qt gtk2 platform theme, so downgrade the hard error to a warning.
-  nixpkgs.config.problems.handlers."gtk+".broken = "warn";
+  # --- Nixpkgs & Overlays ---
+  nixpkgs.config = {
+    allowUnfree = true;
+    permittedInsecurePackages = [
+      "zoom-7.1.5.4332"
+      "pulsar-1.133.1"
+      "librewolf-151.0.2-1"
+      "librewolf-unwrapped-151.0.2-1"
+    ];
+    # gtk2 is flagged broken in nixpkgs; keep as warning for xstata/murrine/nix-ld.
+    problems.handlers."gtk+".broken = "warn";
+  };
 
-  # Package opts
-  programs.nix-ld.enable = true;
-
-  # System Packages
-  environment.systemPackages = with pkgs; [
-
-      # Suckless tools
-      libX11 libXft libXinerama # dependencies
-      st
-      dmenu
-      dwm
-      slstatus
-
-      # Tools
-      git
-      arandr
-      srandrd
-      stow
-      wget
-      vim
-      neovim
-      ranger
-      ripgrep
-      fd
-      cryptsetup
-      brightnessctl
-      xdotool
-      xclip
-      via
-      alsa-utils
-      openconnect
-
-  # Networking
-  cloudflare-warp
-  x11vnc # VNC server
-
-  # GNOME
-  gtk3
-  gsettings-desktop-schemas
-  gnomeExtensions.appindicator
-  libappindicator
-  polkit_gnome
-
-  # Progs
-  nodejs
-  pyright ## for neovim Mason loading LSP config
-
-    # System Management
-    pavucontrol  # Audio GUI
-    htop
-
-  ];
-
-# Libraries for nix-ld
-programs.nix-ld.libraries = with pkgs; [
-  gtk2
-  atk
-  pango
-  gdk-pixbuf
-  cairo
-  glibc
-  glib
-  gcc.cc
-  libx11
-  libxcursor
-  libxrandr
-  libxinerama
-  libxi
-  libxrender
-  libxtst
-  libxcb
-  libsm
-  libice
-  libxcrypt
-  libuuid
-  ncurses5
-  zlib
-  stdenv.cc.cc
-  freetype
-  fontconfig
-];
-
-# Enable dconf
-  programs.dconf.enable = true;
-
-  # Enable XDG Portals
-    xdg.portal = {
-      enable = true;
-      extraPortals = [ pkgs.xdg-desktop-portal-gtk ];
-      config.common.default = "gtk";
-    };
-
-  # suckless tools
   nixpkgs.overlays = [
     (final: prev: {
-
       dwm = prev.dwm.overrideAttrs (old: {
         src = inputs.my-dwm;
         nativeBuildInputs = (old.nativeBuildInputs or []) ++ [ prev.git prev.pkg-config ];
         buildInputs = (old.buildInputs or []) ++ [ prev.libxcb prev.libxcb-util prev.libxcb-wm ];
-
-        # Clean old binaries
-        preBuild = ''
-          make clean
-        '';
-
-        # --- FIX compile ---
-        # Instead of relying on 'make install' and 'makeFlags', we manually copy the binary.
-        # This guarantees it ends up in $out/bin/dwm where NixOS expects it.
+        preBuild = "make clean";
         installPhase = ''
-          mkdir -p $out/bin
+          mkdir -p $out/bin $out/share/man/man1
           cp dwm $out/bin/
-
-          # Optional: Copy man pages if you want 'man dwm' to work
-          mkdir -p $out/share/man/man1
           cp dwm.1 $out/share/man/man1/
         '';
       });
@@ -430,87 +245,138 @@ programs.nix-ld.libraries = with pkgs; [
       st = prev.st.overrideAttrs (old: {
         src = inputs.my-st;
         nativeBuildInputs = (old.nativeBuildInputs or []) ++ [ prev.git prev.pkg-config ];
-          buildInputs = (old.buildInputs or []) ++ [ prev.harfbuzz ];
-
-        # Clean old binaries
-        preBuild = ''
-          make clean
-        '';
-
+        buildInputs = (old.buildInputs or []) ++ [ prev.harfbuzz ];
+        preBuild = "make clean";
         postPatch = ''
-        ${old.postPatch or ""}
-        sed -i '/git submodule/d' Makefile
+          ${old.postPatch or ""}
+          sed -i '/git submodule/d' Makefile
         '';
       });
 
       dmenu = prev.dmenu.overrideAttrs (old: {
         src = inputs.my-dmenu;
         nativeBuildInputs = (old.nativeBuildInputs or []) ++ [ prev.git ];
-
-        # Clean old binaries
-        preBuild = ''
-          make clean
-        '';
-
+        preBuild = "make clean";
       });
 
       slstatus = prev.slstatus.overrideAttrs (old: {
         src = inputs.my-slstatus;
         nativeBuildInputs = (old.nativeBuildInputs or []) ++ [ prev.git ];
-
-        # Clean old binaries
-        preBuild = ''
-          make clean
-        '';
-
+        preBuild = "make clean";
       });
     })
   ];
 
-  # Fonts
-  fonts = {
-      packages = with pkgs; [
-        noto-fonts
-        noto-fonts-cjk-sans
-        noto-fonts-color-emoji
-        font-awesome
-        nerd-fonts.jetbrains-mono
-        nerd-fonts.symbols-only
-      ];
+  # --- Packages & nix-ld ---
+  environment.systemPackages = with pkgs; [
+    # Suckless
+    libX11 libXft libXinerama
+    st
+    dmenu
+    dwm
+    slstatus
 
-      fontconfig = {
-        enable = true;
-        defaultFonts = {
-          monospace = [ "NotoMono Nerd Font" ];
-          serif = [ "Noto Serif" ];
-          sansSerif = [ "Noto Sans" ];
-        };
-      };
+    # CLI & System Tools
+    git
+    arandr
+    srandrd
+    stow
+    wget
+    vim
+    neovim
+    ranger
+    ripgrep
+    fd
+    cryptsetup
+    brightnessctl
+    xdotool
+    xclip
+    via
+    alsa-utils
+    openconnect
+    htop
+    pavucontrol
+
+    # Networking
+    cloudflare-warp
+    x11vnc
+
+    # GTK / GNOME integration
+    gtk3
+    gsettings-desktop-schemas
+    gnomeExtensions.appindicator
+    libappindicator
+    polkit_gnome
+
+    # Dev
+    nodejs
+    pyright # for neovim Mason LSP
+  ];
+
+  programs.nix-ld = {
+    enable = true;
+    libraries = with pkgs; [
+      gtk2
+      atk
+      pango
+      gdk-pixbuf
+      cairo
+      glibc
+      glib
+      stdenv.cc.cc
+      libx11
+      libxcursor
+      libxrandr
+      libxinerama
+      libxi
+      libxrender
+      libxtst
+      libxcb
+      libsm
+      libice
+      libxcrypt
+      libuuid
+      ncurses5
+      zlib
+      freetype
+      fontconfig
+    ];
   };
 
+  # --- Fonts ---
+  fonts = {
+    packages = with pkgs; [
+      noto-fonts
+      noto-fonts-cjk-sans
+      noto-fonts-color-emoji
+      font-awesome
+      nerd-fonts.jetbrains-mono
+      nerd-fonts.symbols-only
+    ];
 
-  # Other nix settings
-  nix.settings.experimental-features = ["nix-command" "flakes"];
+    fontconfig = {
+      enable = true;
+      defaultFonts = {
+        monospace = [ "NotoMono Nerd Font" ];
+        serif = [ "Noto Serif" ];
+        sansSerif = [ "Noto Sans" ];
+      };
+    };
+  };
 
-# Allow pulling cached pre-built binaries for Claude Code
+  # --- Nix Settings ---
   nix.settings = {
+    experimental-features = [ "nix-command" "flakes" ];
+    auto-optimise-store = true;
     substituters = [ "https://claude-code.cachix.org" ];
     trusted-public-keys = [ "claude-code.cachix.org-1:YeXf2aNu7UTX8Vwrze0za1WEDS+4DuI2kVeWEE4fsRk=" ];
   };
 
-  # Automatic garbage collection. Without this every nixos-rebuild keeps its
-  # generation forever; by Nov 2026 177 generations had filled 439G of the
-  # 512G root. Keep two weeks of generations as boot-menu fallbacks and
-  # hard-link identical store files.
   nix.gc = {
     automatic = true;
     dates = "weekly";
     options = "--delete-older-than 14d";
   };
-  nix.settings.auto-optimise-store = true;
 
-  # Leave at the release version of first install (25.11)
-  # Before changing this value read the documentation for this option
-  # (e.g. man configuration.nix or on https://nixos.org/nixos/options.html).
   system.stateVersion = "25.11";
 }
